@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buyback Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+:root{--bg:#f2f3f1;--card:#fff;--ink:#151515;--mut:#8b9088;--line:#ececea;--soft:#f6f6f4;--g:#8cc68a;--gi:#3e9a45;--o:#f28b3c;--r:#e5484d;--pill-g:#dff0de;--pill-o:#fde6d3}
+body.dark{--bg:#0e100e;--card:#1a1c1a;--ink:#f3f4f2;--mut:#9aa097;--line:#2b2e2b;--soft:#232623;--pill-g:#24402a;--pill-o:#4a3320}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans','Noto Sans Thai',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;display:flex;min-height:100vh}
+button,input,textarea{font:inherit;color:inherit}
+.side{width:236px;flex:none;background:var(--card);padding:22px 18px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--line)}
+.logo{font-weight:800;font-size:20px;display:flex;align-items:center;gap:10px;margin-bottom:22px}.logo i{color:var(--o)}
+.grp{font-size:12px;font-weight:600;color:var(--mut);margin:10px 8px 4px}
+.cos{display:flex;flex-direction:column;gap:6px}
+.nav{border:0;background:none;text-align:left;padding:11px 14px;border-radius:12px;font-weight:600;color:var(--mut);display:flex;gap:12px;align-items:center;cursor:pointer;transition:.2s}
+.nav:hover{background:var(--soft);color:var(--ink)}.nav.on{background:var(--ink);color:var(--card)}
+.nav i{width:18px;text-align:center;color:var(--o)}
+.x{margin-left:auto;display:none;font-size:18px;line-height:1;color:var(--mut)}.nav:hover .x{display:block}.x:hover{color:var(--r)}
+.addco{border:1.5px dashed var(--line);color:var(--mut)}.addco:hover{border-color:var(--g)}
+.promo{margin-top:auto;background:var(--g);color:#14281a;border-radius:20px;padding:18px}
+.promo b{display:block;font-size:15px;margin-bottom:4px}.promo small{display:block;opacity:.8}
+.bar{height:8px;background:rgba(255,255,255,.55);border-radius:8px;margin:12px 0;overflow:hidden}.bar i{display:block;height:100%;width:0;background:#14281a;border-radius:8px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.mode{display:flex;background:var(--soft);border-radius:14px;padding:4px;margin-top:12px}
+.mode button{flex:1;border:0;background:none;padding:8px;border-radius:11px;font-weight:600;color:var(--mut);cursor:pointer;display:flex;gap:7px;align-items:center;justify-content:center}
+.mode button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.14)}
+.btn{border:0;background:#151515;color:#fff;padding:10px 16px;border-radius:12px;font-weight:600;cursor:pointer;transition:.2s}.btn:hover{transform:translateY(-1px)}
+.main{flex:1;min-width:0;padding:22px 26px;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.top h1{font-size:22px;font-weight:800}
+.top p{color:var(--mut);font-size:12.5px;margin-top:2px}
+.search{margin-left:auto;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:10px 16px;width:min(320px,100%)}
+.search input{border:0;outline:0;background:none;width:100%}.search i{color:var(--mut)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.grid2{display:grid;grid-template-columns:1.8fr 1fr;gap:18px}
+.card{background:var(--card);border-radius:22px;padding:20px;border:1px solid var(--line);min-width:0}
+.stat .lbl{color:var(--mut);font-size:13px;font-weight:500}.stat .big{font-size:26px;font-weight:800;margin:6px 0 8px;letter-spacing:-.5px}
+.pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}.pg{background:var(--pill-g);color:var(--gi)}.po{background:var(--pill-o);color:var(--o)}
+.spark{height:74px;margin:8px 0}.foot{font-size:12px;color:var(--mut)}.foot b{color:var(--gi)}
+.hd{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}.hd h3{font-size:16px;font-weight:700}.hd small{color:var(--mut)}
+.seg{margin-left:auto;display:flex;background:var(--soft);border-radius:12px;padding:3px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:9px;font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer}.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.list{max-height:430px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin:0 -8px;padding:0 8px}
+.row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:14px;cursor:pointer;transition:.15s;border:1px solid transparent}
+.row:hover{background:var(--soft)}.row.sel{border-color:var(--g);background:var(--soft)}
+.av{width:40px;height:40px;border-radius:50%;background:var(--ink);color:var(--card);display:grid;place-items:center;font-weight:700;flex:none}
+.row:nth-child(even) .av{background:var(--o);color:#fff}
+.mid{flex:1;min-width:0}.mid b{display:block;font-size:13.5px}.mid small,.rt small{color:var(--mut);font-size:12px}
+.rt{text-align:right}.rt b{display:block;font-size:13.5px}
+.acts{display:none;gap:4px}.row:hover .acts{display:flex}.row:hover .rt{display:none}
+.ib{border:0;width:30px;height:30px;border-radius:9px;cursor:pointer;background:var(--card);color:var(--ink)}.ib.d{color:var(--r)}
+.empty{color:var(--mut);text-align:center;padding:30px 0}
+.dwrap{display:grid;grid-template-columns:minmax(180px,230px) 1fr;gap:20px;align-items:center}
+.dchart{height:210px}.prop{text-align:center;font-weight:800;font-size:15px;margin-top:8px;color:var(--gi)}
+.kvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.kv{background:var(--soft);border-radius:14px;padding:12px}.kv small{display:block;color:var(--mut);font-size:11.5px;margin-bottom:4px}.kv b{font-size:15px}
+.more{width:100%;margin-top:16px;display:flex;align-items:center;justify-content:space-between;background:var(--soft);border:0;border-radius:14px;padding:12px 16px;font-weight:700;cursor:pointer}
+.more i{transition:transform .25s;color:var(--mut)}.more.open i{transform:rotate(180deg)}
+.mbody{display:none;margin-top:12px;animation:dd .25s}.mbody.on{display:block}
+@keyframes dd{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.note{margin-top:12px;background:var(--soft);border-radius:14px;padding:12px;line-height:1.5;white-space:pre-wrap}
+.imgs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.imgs img{width:58px;height:58px;object-fit:cover;border-radius:12px;cursor:zoom-in;transition:.15s}.imgs img:hover{transform:scale(1.08)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;margin-bottom:12px}
+.fs{background:var(--soft);border-radius:16px;padding:14px}.fs h4{font-size:13.5px;margin-bottom:10px}
+.ig{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+label{display:block;font-size:11.5px;font-weight:600;color:var(--mut);margin-bottom:5px}
+input[type=number],input[type=date],input[type=text],input[type=file],textarea{width:100%;padding:10px 12px;border-radius:11px;border:1px solid var(--line);background:var(--card);outline:0;transition:.15s}
+input:focus,textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(140,198,138,.3)}
+.sub{width:100%;padding:13px;font-size:15px;background:var(--g);color:#14281a}.sub:hover{background:#7bbb79}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:98;place-items:center}.ov.on{display:grid}
+.mbox{width:min(420px,92vw);display:flex;flex-direction:column;gap:12px}
+#lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99;justify-content:center;align-items:center}
+#lb img{max-width:80%;max-height:80%;border-radius:14px}
+.lbx{position:absolute;color:#fff;font-size:34px;cursor:pointer;padding:18px;user-select:none}
+#noteOv{align-items:start;overflow-y:auto;padding:24px}.nbox{width:min(900px,100%);margin:auto}
+input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;opacity:0;overflow:hidden}
+.fpick{display:flex;align-items:center;gap:10px;margin-bottom:10px;position:relative}.fpick span{color:var(--mut);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbtn{display:inline-block;margin:0;padding:9px 14px;border-radius:11px;background:var(--card);border:1px solid var(--line);color:var(--ink);font-size:13px;cursor:pointer;flex:none}
+.vh:focus+.fbtn,.fbtn:hover{border-color:var(--g)}
+.credit{align-self:flex-end;margin-top:auto;color:var(--mut);font-size:12.5px;font-weight:500}
+
+.auth{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;padding:20px}.auth.off{display:none}
+.abox{width:min(380px,100%);display:flex;flex-direction:column;gap:14px;padding:28px}.abox h2{font-size:22px;font-weight:800}.abox p{color:var(--mut);font-size:13px;margin-top:-8px}
+.abox input[type=text],.abox input[type=password]{width:100%;padding:10px 12px;border-radius:11px;border:1px solid var(--line);background:var(--card);outline:0;transition:.15s}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--ink);margin:0;cursor:pointer}.chk input{width:16px;height:16px;accent-color:var(--gi)}
+.sync{font-size:12px;color:var(--mut);padding:0 14px 4px}
+.err{color:var(--r);font-size:12.5px;min-height:16px}
+.lnk{background:none;border:0;color:var(--mut);font-size:12.5px;cursor:pointer;text-decoration:underline;align-self:center}
+#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,30px);background:#151515;color:#fff;padding:11px 20px;border-radius:30px;opacity:0;transition:.3s;z-index:300;pointer-events:none}#toast.on{opacity:1;transform:translate(-50%,0)}
+@media(max-width:1100px){.grid2,.grid3,.fgrid{grid-template-columns:1fr}}
+@media(max-width:700px){.dwrap{grid-template-columns:1fr}}
+@media(max-width:800px){body{flex-direction:column}.side{width:100%;height:auto;position:static}.promo,.grp{display:none}.cos{flex-direction:row;flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head>
+<body>
+<div class="auth" id="auth"><form class="card abox" id="aForm" onsubmit="authSubmit(event)">
+ <h2 id="aTitle">Sign in</h2><p id="aSub"></p>
+ <div><label for="a_u">Email</label><input type="text" id="a_u" name="username" autocomplete="username" inputmode="email" required></div>
+ <div><label for="a_p">Password</label><input type="password" id="a_p" name="password" autocomplete="current-password" required></div>
+ <div id="a_cwrap" style="display:none"><label for="a_c">Confirm password</label><input type="password" id="a_c" autocomplete="new-password"></div>
+ <label class="chk"><input type="checkbox" id="a_r" checked> Keep me signed in on this device</label>
+ <div class="err" id="aErr" role="alert"></div>
+ <button class="btn sub" id="aBtn">Sign in</button>
+ <button type="button" class="lnk" id="aToggle" onclick="setMode(mode==='in'?'up':'in')"></button>
+ <button type="button" class="lnk" id="aForgot" onclick="forgot()">Forgot password?</button>
+</form></div>
+<aside class="side">
+ <div class="logo"><i class="fas fa-chart-line"></i> Buyback Tracker</div>
+ <div class="grp">Companies</div>
+ <div class="cos" id="cos"></div>
+ <button class="nav addco" onclick="openModal()"><i class="fas fa-plus"></i> Add stock</button>
+ <div class="grp">Other menu</div>
+ <button class="nav" onclick="openNote()"><i class="fas fa-pen-to-square"></i> New note</button>
+ <button class="nav" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Log out</button>
+ <div class="sync" id="sync"></div>
+ <div class="promo"><b>Target progress</b><small id="pSub"></small><div class="bar"><i id="pBar"></i></div><button class="btn" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Export Excel</button></div>
+ <div class="mode"><button id="mL" onclick="setTheme(0)"><i class="fas fa-sun"></i> Light</button><button id="mD" onclick="setTheme(1)"><i class="fas fa-moon"></i> Dark</button></div>
+</aside>
+<main class="main">
+ <div class="top">
+  <div><h1 id="title"></h1><p id="period"></p></div>
+  <label class="search" style="margin:0 0 0 auto"><i class="fas fa-search"></i><input id="q" placeholder="Search date or notes" oninput="renderList()"></label>
+ </div>
+ <div class="grid3">
+  <div class="card stat"><div class="lbl">Total bought (shares)</div><div class="big" id="s1">0</div><span class="pill pg" id="p1">0%</span><div class="spark"><canvas id="c1"></canvas></div><div class="foot" id="f1"></div></div>
+  <div class="card stat"><div class="lbl">Total spent (THB)</div><div class="big" id="s2">0</div><span class="pill po" id="p2">0%</span><div class="spark"><canvas id="c2"></canvas></div><div class="foot" id="f2"></div></div>
+  <div class="card stat"><div class="lbl">Share of market volume</div><div class="big" id="s3">0%</div><span class="pill pg" id="p3">-</span><div class="spark"><canvas id="c3"></canvas></div><div class="foot" id="f3"></div></div>
+ </div>
+ <div class="grid2">
+  <div class="card"><div class="hd"><h3>Record details</h3><small id="dDate"></small></div><div id="det"></div></div>
+  <div class="card">
+   <div class="hd"><h3>Daily records</h3><div class="seg"><button class="on" data-f="all" onclick="setF(this)">All</button><button data-f="up" onclick="setF(this)">Up</button><button data-f="dn" onclick="setF(this)">Down</button></div></div>
+   <div class="list" id="list"></div>
+  </div>
+ </div>
+ <div class="ov" id="noteOv" onclick="closeNote()"><div class="card nbox" id="form" onclick="event.stopPropagation()">
+  <div class="hd"><h3 id="fTitle">New note</h3><button type="button" class="ib" style="margin-left:auto" aria-label="Close" onclick="closeNote()">&times;</button></div>
+  <form data-enter="1" onsubmit="saveData(event)">
+   <div class="fgrid">
+    <div class="fs"><h4><i class="fas fa-hand-holding-usd"></i> Buyback by company</h4><div class="ig">
+     <div style="grid-column:1/-1"><label>Date</label><input type="date" id="r_date" required></div>
+     <div><label>Volume</label><input type="number" step="100" id="bb_vol" required></div><div><label>High</label><input type="number" step="0.01" id="bb_high"></div>
+     <div><label>Low</label><input type="number" step="0.01" id="bb_low"></div><div><label>Value</label><input type="number" step="0.01" id="bb_val"></div></div></div>
+    <div class="fs"><h4><i class="fas fa-globe"></i> Market price</h4><div class="ig">
+     <div><label>Open</label><input type="number" step="0.01" id="m_open"></div><div><label>High</label><input type="number" step="0.01" id="m_high"></div>
+     <div><label>Low</label><input type="number" step="0.01" id="m_low"></div><div><label>Close</label><input type="number" step="0.01" id="m_close"></div>
+     <div><label>Market vol</label><input type="number" step="100" id="m_vol" required></div><div><label>SET change (+/-)</label><input type="number" step="1" id="set_index" value="0" required></div></div></div>
+    <div class="fs" style="grid-column:1/-1"><h4><i class="fas fa-paperclip"></i> Additional info</h4>
+     <label>Attach images <span id="editImg" style="color:var(--o);display:none">(leave empty to keep existing)</span></label><div class="fpick"><input type="file" id="r_images" class="vh" accept="image/*" multiple onchange="upFname()"><label for="r_images" class="fbtn">Choose files</label><span id="fname">No file chosen</span></div>
+     <label>Notes</label><textarea id="r_notes" rows="2"></textarea></div>
+   </div>
+   <button class="btn sub" id="btnSubmit">Save record</button>
+   <button type="button" class="btn sub" style="margin-top:8px;background:var(--soft);color:var(--ink)" onclick="closeNote()">Cancel</button>
+  </form>
+ </div></div>
+ <footer class="credit">website developed by Ryan 2026</footer>
+</main>
+<div class="ov" id="modal" onclick="closeModal()"><form class="card mbox" id="coForm" data-enter="1" onsubmit="addCo(event)" onclick="event.stopPropagation()">
+ <h3>Add stock</h3>
+ <div><label>Ticker</label><input type="text" id="co_t" placeholder="e.g. PTT" required maxlength="12" style="text-transform:uppercase"></div>
+ <div><label>Project period</label><input type="text" id="co_p" placeholder="e.g. 1 Oct 2026 - 31 Mar 2027"></div>
+ <div><label>Total target (shares)</label><input type="number" id="co_s" min="1" required></div>
+ <div><label>Total budget (THB)</label><input type="number" id="co_b" min="1" required></div>
+ <div><label>Previous close price</label><input type="number" id="co_c" step="0.01" min="0" required></div>
+ <button class="btn sub">Add stock</button><button type="button" class="btn" style="background:var(--soft);color:var(--ink)" onclick="closeModal()">Cancel</button>
+</form></div>
+<div id="lb" onclick="closeLb()"><span class="lbx" style="top:6px;right:14px" onclick="closeLb()">&times;</span><span class="lbx lbn" style="left:10px" onclick="chImg(-1,event)">&#10094;</span><img id="lbi" onclick="event.stopPropagation()"><span class="lbx lbn" style="right:10px" onclick="chImg(1,event)">&#10095;</span><div class="lbx" style="bottom:6px;font-size:16px" id="lbc"></div></div>
+<div id="toast"></div>
+<script>
+const base={MAJOR:{period:'1 Oct 2026 - 31 Mar 2027',maxShares:68000000,maxBudget:550000000,baseClose:7.15,icon:'film'},SKR:{period:'30 Sep 2026 - 29 Mar 2027',maxShares:127314000,maxBudget:1000000000,baseClose:7.55,icon:'cross'}};
+const getCustom=()=>{try{return JSON.parse(localStorage.getItem('bbCustom'))||{}}catch(e){return{}}};
+const setCustom=c=>{try{localStorage.setItem('bbCustom',JSON.stringify(c))}catch(e){}};
+let config={...base,...getCustom()};
+let cur='MAJOR',filt='all',editingId=null,editImgs=[],gal=[],gi=0,selId=null,moreOpen=false,CH={};
+const $=id=>document.getElementById(id),fmt=n=>Number(n).toLocaleString(),css=v=>getComputedStyle(document.body).getPropertyValue(v).trim();
+const money=n=>Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const f2=v=>v?Number(v).toFixed(2):'-';
+function load(){try{return JSON.parse(localStorage.getItem('stockData_'+cur))||[]}catch(e){return[]}}
+function store(d){try{localStorage.setItem('stockData_'+cur,JSON.stringify(d))}catch(e){toast('Cannot save: storage is full or unavailable')}}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(e.t);e.t=setTimeout(()=>e.classList.remove('on'),2200)}
+function prep(){const d=load().sort((a,b)=>new Date(a.dateRaw)-new Date(b.dateRaw));let p=config[cur].baseClose;d.forEach(i=>{if(i.m_close){const c=Number(i.m_close);i.pct=p>0?(c-p)/p*100:0;p=c}else i.pct=0});return d}
+const fullDate=d=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T00:00:00'));
+function setTheme(d){document.body.classList.toggle('dark',!!d);try{localStorage.setItem('bbTheme',d?'d':'l')}catch(e){}render();if(selId)showDetails(selId)}
+try{if(localStorage.getItem('bbTheme')==='d')document.body.classList.add('dark')}catch(e){}
+function sw(c){cancelEdit();cur=c;selId=null;render();autoSelect()}
+function setF(b){filt=b.dataset.f;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));renderList()}
+function renderNav(){$('cos').innerHTML=Object.keys(config).map(k=>`<button class="nav ${k===cur?'on':''}" onclick="sw('${k}')"><span>${k}</span>${config[k].custom?`<span class="x" title="Remove" onclick="delCo('${k}',event)">&times;</span>`:''}</button>`).join('')}
+function openModal(){$('modal').classList.add('on');$('co_t').focus()}
+function closeModal(){$('modal').classList.remove('on')}
+function addCo(e){e.preventDefault();const k=$('co_t').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+ if(!k)return;if(config[k]){toast(k+' already exists');return}
+ config[k]={period:$('co_p').value||'-',maxShares:+$('co_s').value,maxBudget:+$('co_b').value,baseClose:+$('co_c').value,icon:'chart',custom:true};
+ const c=getCustom();c[k]=config[k];setCustom(c);enq({a:'uc',t:k});$('coForm').reset();closeModal();sw(k);toast(k+' added')}
+function delCo(k,ev){ev.stopPropagation();if(!confirm('Remove '+k+' and all of its records?'))return;
+ const c=getCustom();delete c[k];setCustom(c);enq({a:'dc',t:k});try{localStorage.removeItem('stockData_'+k)}catch(e){}delete config[k];
+ if(cur===k)sw('MAJOR');else renderNav();toast(k+' removed')}
+function mk(id,cfg){if(CH[id])CH[id].destroy();CH[id]=new Chart($(id),cfg)}
+function spark(id,vals,col){if(vals.length<2)vals=[0,...vals,...(vals.length?[]:[0])];mk(id,{type:'line',data:{labels:vals.map((_,i)=>i),datasets:[{data:vals,borderColor:col,borderWidth:2,tension:.4,pointRadius:0,pointHoverRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}})}
+function render(){
+ const c=config[cur],d=prep(),G=css('--g'),O=css('--o'),dark=document.body.classList.contains('dark');
+ renderNav();$('mL').classList.toggle('on',!dark);$('mD').classList.toggle('on',dark);
+ $('title').textContent=cur+' Buyback';$('period').textContent='Project period: '+c.period;
+ let bought=0,spent=0,mv=0,cv=[],cs=[],pr=[];
+ d.forEach(i=>{bought+=+i.bb_vol||0;spent+=+i.bb_val||0;mv+=+i.m_vol||0;cv.push(bought);cs.push(spent);pr.push(i.m_vol>0?i.bb_vol/i.m_vol*100:0)});
+ const pS=bought/c.maxShares*100,pB=spent/c.maxBudget*100,last=pr.length?pr[pr.length-1]:null;
+ $('s1').textContent=fmt(bought);$('p1').textContent=pS.toFixed(2)+'% of target';$('f1').innerHTML='Remaining <b>'+fmt(c.maxShares-bought)+'</b> of '+fmt(c.maxShares);
+ $('s2').textContent='฿'+money(spent);$('p2').textContent=pB.toFixed(2)+'% of budget';$('f2').innerHTML='Remaining <b>฿'+money(c.maxBudget-spent)+'</b>'+(bought?' · avg ฿'+(spent/bought).toFixed(2):'');
+ $('s3').textContent=(mv?bought/mv*100:0).toFixed(2)+'%';$('p3').textContent=last===null?'No data':'Latest '+last.toFixed(2)+'%';$('f3').textContent=d.length+' trading days recorded';
+ $('pSub').textContent=fmt(bought)+' / '+fmt(c.maxShares)+' shares';$('pBar').style.width=Math.min(100,pS)+'%';
+ spark('c1',cv,G);spark('c2',cs,O);spark('c3',pr,G);renderList();
+}
+function renderList(){
+ const q=$('q').value.toLowerCase();let d=prep().reverse();
+ d=d.filter(i=>(filt==='all'||(filt==='up'?i.pct>0:i.pct<0))&&(!q||(i.dateFormatted+' '+(i.notes||'')).toLowerCase().includes(q)));
+ $('list').innerHTML=d.length?d.map(i=>{const p=i.pct,col=p>0?'var(--gi)':p<0?'var(--r)':'var(--mut)',s=Number(i.set_index)||0;
+  return `<div class="row ${i.id===selId?'sel':''}" onclick="showDetails(${i.id})"><div class="av">${i.dateRaw.slice(8)}</div><div class="mid"><b>${i.dateFormatted}</b><small>Close ${i.m_close||'-'} · SET ${s>0?'+':''}${s}</small></div><div class="rt"><b>${fmt(i.bb_vol)}</b><small style="color:${col}">${p>0?'+':''}${p.toFixed(2)}%</small></div><div class="acts"><button class="ib" onclick="editRecord(${i.id},event)"><i class="fas fa-pen"></i></button><button class="ib d" onclick="deleteRecord(${i.id},event)"><i class="fas fa-trash"></i></button></div></div>`}).join(''):'<div class="empty">No records found.</div>';
+}
+function autoSelect(){const d=prep();if(d.length)showDetails(d[d.length-1].id);else{$('dDate').textContent='';$('det').innerHTML='<div class="empty">No records yet. Add one from the form below.</div>'}}
+function toggleMore(){moreOpen=!moreOpen;$('mb').classList.toggle('on',moreOpen);$('mbtn').classList.toggle('open',moreOpen)}
+function showDetails(id){
+ const all=prep(),i=all.find(x=>x.id===id);if(!i)return;selId=id;renderList();
+ const rest=Math.max(0,i.m_vol-i.bb_vol),pc=i.m_vol>0?(i.bb_vol/i.m_vol*100).toFixed(2):0,s=Number(i.set_index)||0;
+ const kv=(l,v,c)=>`<div class="kv"><small>${l}</small><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
+ $('dDate').textContent=i.dateFormatted;
+ $('det').innerHTML=`<div class="dwrap"><div><div class="dchart"><canvas id="dn"></canvas></div><div class="prop">Buyback proportion: ${pc}%</div></div>
+ <div class="kvs">${kv('Buyback volume',fmt(i.bb_vol))}${kv('Buyback value',i.bb_val?'฿'+money(i.bb_val):'-')}${kv('Market volume',fmt(i.m_vol))}${kv('Market close',f2(i.m_close))}
+ ${kv('% change',(i.pct>0?'+':'')+i.pct.toFixed(2)+'%',i.pct>0?'var(--gi)':i.pct<0?'var(--r)':'')}${kv('SET change',(s>0?'+':'')+s,s>0?'var(--gi)':s<0?'var(--r)':'')}</div></div>
+ <button class="more ${moreOpen?'open':''}" id="mbtn" onclick="toggleMore()"><span>More</span><i class="fas fa-chevron-down"></i></button>
+ <div class="mbody ${moreOpen?'on':''}" id="mb"><div class="kvs">${kv('Buyback high',f2(i.bb_high))}${kv('Buyback low',f2(i.bb_low))}${kv('Market open',f2(i.m_open))}${kv('Market high',f2(i.m_high))}${kv('Market low',f2(i.m_low))}</div>
+ ${i.notes?`<div class="note">${esc(i.notes)}</div>`:''}<div class="imgs">${(i.images||[]).map((s,k)=>`<img src="${s}" onclick="openLb(${id},${k})">`).join('')}</div></div>`;
+ mk('dn',{type:'doughnut',data:{labels:['Buyback volume','Other market volume'],datasets:[{data:[i.bb_vol,rest],backgroundColor:[css('--g'),css('--soft')],borderWidth:0,hoverOffset:6}]},options:{cutout:'68%',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:css('--mut'),usePointStyle:true,boxWidth:8}}}}});
+}
+const shrink=f=>new Promise(res=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const k=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.7))};im.onerror=()=>res(b64(f));im.src=u});
+const b64=f=>new Promise((r,j)=>{const x=new FileReader();x.onload=()=>r(x.result);x.onerror=j;x.readAsDataURL(f)});
+async function saveData(e){
+ e.preventDefault();const f=$('r_images').files;let imgs=f.length?await Promise.all([...f].map(shrink)):(editingId?editImgs:[]);
+ const v=k=>$(k).value,r={id:editingId||Date.now(),dateRaw:v('r_date'),dateFormatted:fullDate(v('r_date')),bb_vol:+v('bb_vol'),bb_high:v('bb_high'),bb_low:v('bb_low'),bb_val:v('bb_val'),m_open:v('m_open'),m_high:v('m_high'),m_low:v('m_low'),m_close:v('m_close'),m_vol:+v('m_vol'),set_index:v('set_index'),notes:v('r_notes'),images:imgs};
+ const d=load();if(editingId){const x=d.findIndex(a=>a.id===editingId);if(x>-1)d[x]=r}else d.push(r);
+ store(d);enq({a:'ur',t:cur,id:r.id});const was=editingId;closeNote();render();showDetails(r.id);toast(was?'Record updated':'Record saved');
+}
+function editRecord(id,ev){ev.stopPropagation();const i=load().find(x=>x.id===id);if(!i)return;
+ ['bb_vol','bb_high','bb_low','bb_val','m_open','m_high','m_low','m_close','m_vol'].forEach(k=>$(k).value=i[k]||'');
+ $('r_date').value=i.dateRaw;$('set_index').value=i.set_index||'0';$('r_notes').value=i.notes||'';
+ editingId=id;editImgs=i.images||[];$('btnSubmit').textContent='Update record';$('fTitle').textContent='Edit note';$('editImg').style.display='inline';showNote()}
+function upFname(){const f=$('r_images').files;$('fname').textContent=!f.length?'No file chosen':f.length===1?f[0].name:f.length+' files selected'}
+function showNote(){$('noteOv').classList.add('on');$('r_date').focus()}
+function openNote(){cancelEdit();showNote()}
+function closeNote(){cancelEdit();$('noteOv').classList.remove('on')}
+function cancelEdit(){editingId=null;editImgs=[];document.querySelector('#form form').reset();$('r_date').valueAsDate=new Date();$('set_index').value='0';$('btnSubmit').textContent='Save record';$('fTitle').textContent='New note';upFname();$('editImg').style.display='none'}
+function deleteRecord(id,ev){ev.stopPropagation();if(!confirm('Are you sure you want to delete this record?'))return;
+ store(load().filter(x=>x.id!==id));enq({a:'dr',t:cur,id});if(editingId===id)cancelEdit();if(selId===id)selId=null;render();autoSelect();toast('Record deleted')}
+function openLb(id,k){gal=load().find(x=>x.id===id).images;gi=k;upLb();$('lb').style.display='flex'}
+function chImg(n,e){e.stopPropagation();gi=(gi+n+gal.length)%gal.length;upLb()}
+function upLb(){$('lbi').src=gal[gi];$('lbc').textContent=(gi+1)+' / '+gal.length;document.querySelectorAll('.lbn').forEach(x=>x.style.display=gal.length>1?'block':'none')}
+function closeLb(){$('lb').style.display='none'}
+document.addEventListener('keydown',e=>{
+ if($('lb').style.display==='flex'){if(e.key==='Escape')closeLb();if(e.key==='ArrowLeft')chImg(-1,e);if(e.key==='ArrowRight')chImg(1,e);return}
+ if(e.key==='Escape'){closeModal();closeNote()}
+ const t=e.target;if(e.key!=='Enter'||!t.form||!t.form.dataset.enter)return;
+ if(t.tagName==='TEXTAREA'){if(e.ctrlKey||e.metaKey)t.form.requestSubmit();return}
+ if(t.tagName!=='INPUT'||t.type==='file')return;
+ const f=[...t.form.querySelectorAll('input,textarea')],i=f.indexOf(t);
+ if(i>-1&&i<f.length-1){e.preventDefault();const n=f[i+1];n.focus();if(n.tagName==='INPUT'&&n.type!=='file')try{n.select()}catch(_){}}
+});
+function exportToExcel(){
+ const d=prep();if(!d.length){toast('No data available to export');return}
+ const rows=d.map(i=>({"Date":i.dateFormatted,"Buyback Volume":i.bb_vol,"Buyback High":i.bb_high,"Buyback Low":i.bb_low,"Buyback Value":i.bb_val,"Market Open":i.m_open,"Market High":i.m_high,"Market Low":i.m_low,"Market Close":i.m_close,"% Change":i.pct.toFixed(2)+'%',"Market Volume":i.m_vol,"SET Points":i.set_index,"Notes":i.notes}));
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),cur+' Data');XLSX.writeFile(wb,cur+'_Buyback_Records.xlsx')}
+// ---- Supabase (cloud sync + login). Local copy stays the working store, so everything works offline. ----
+const SUPA_URL='https://bnjjzepzwcagsdecpovl.supabase.co',SUPA_KEY='sb_publishable_9Zsx9XgwhzuYMcgxjt8MzA_lHa81iim';
+const sb=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_KEY):null;
+const AK='bbAuth',SK='bbSession',LU='bbLastUser';
+let mode='in',syncing=false,UID=null;
+const b64e=b=>btoa(String.fromCharCode(...new Uint8Array(b))),b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function hashPw(pw,salt){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);return b64e(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},k,256))}
+const getAcct=()=>{try{return JSON.parse(localStorage.getItem(AK))}catch(e){return null}};
+const isNet=e=>!e||e.status===0||/fetch|network/i.test(e.message||'')||!navigator.onLine;
+const msgOf=e=>/invalid login/i.test(e.message)?'Wrong email or password.':e.message;
+const setSync=t=>{$('sync').textContent=t};
+function sessionOk(a){try{const s=JSON.parse(localStorage.getItem(SK));if(s&&s.u===a.u&&s.exp>Date.now())return true}catch(e){}try{return sessionStorage.getItem(SK)===a.u}catch(e){return false}}
+function unlock(){$('auth').classList.add('off');syncNow()}
+function setMode(m){mode=m;const up=m==='up';
+ $('aTitle').textContent=up?'Create account':'Sign in';
+ $('aSub').textContent=up?'Use your email. Your records sync across devices.':'Works offline on devices you have signed in on before.';
+ $('a_cwrap').style.display=up?'block':'none';$('a_c').required=up;$('a_p').autocomplete=up?'new-password':'current-password';
+ $('aBtn').textContent=up?'Create account':'Sign in';$('aToggle').textContent=up?'Already have an account? Sign in':'New here? Create account';
+ $('aForgot').style.display=up?'none':'';$('aErr').textContent=''}
+function authInit(){
+ const a=getAcct();setMode('in');
+ try{$('a_u').value=localStorage.getItem(LU)||''}catch(e){}
+ if(a&&sessionOk(a)){unlock();return}
+ $('auth').classList.remove('off');setTimeout(()=>($('a_u').value?$('a_p'):$('a_u')).focus(),50);
+}
+function wipeLocal(){try{Object.keys(localStorage).filter(k=>/^(stockData_|bbMig_)/.test(k)||k==='bbCustom'||k==='bbQ').forEach(k=>localStorage.removeItem(k))}catch(e){}config={...base};cur='MAJOR';selId=null}
+async function finish(u,p,a,off){
+ if(!off){
+  if(a&&a.u.includes('@')&&a.u.toLowerCase()!==u)wipeLocal();
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  try{localStorage.setItem(AK,JSON.stringify({u,s:b64e(salt),h:await hashPw(p,salt)}))}catch(x){}
+ }
+ const cu=off?a.u:u;
+ try{localStorage.setItem(LU,cu)}catch(x){}
+ try{if($('a_r').checked)localStorage.setItem(SK,JSON.stringify({u:cu,exp:Date.now()+30*864e5}));else{localStorage.removeItem(SK);sessionStorage.setItem(SK,cu)}}catch(x){}
+ $('a_p').value='';$('a_c').value='';unlock();
+}
+async function authSubmit(e){
+ e.preventDefault();const u=$('a_u').value.trim().toLowerCase(),p=$('a_p').value,err=m=>{$('aErr').textContent=m};err('');
+ if(!(window.crypto&&crypto.subtle))return err('This browser cannot run secure login. Use a recent browser over https.');
+ const a=getAcct(),local=async()=>!!a&&u===a.u.toLowerCase()&&await hashPw(p,b64d(a.s))===a.h;
+ try{
+  if(mode==='up'){
+   if(!/^\S+@\S+\.\S+$/.test(u))return err('Enter a valid email address.');
+   if(p.length<6)return err('Password must be at least 6 characters.');
+   if(p!==$('a_c').value)return err('Passwords do not match.');
+   if(!sb||!navigator.onLine)return err('Creating an account needs an internet connection.');
+   const {data,error}=await sb.auth.signUp({email:u,password:p});
+   if(error)return err(msgOf(error));
+   if(!data.session){setMode('in');return err('Account created. Check your email to confirm it, then sign in.')}
+   return finish(u,p,a);
+  }
+  if(sb&&u.includes('@')){
+   const {error}=await sb.auth.signInWithPassword({email:u,password:p});
+   if(!error)return finish(u,p,a);
+   if(!isNet(error))return err(msgOf(error));
+  }
+  if(await local()){setSync(u.includes('@')?'Offline · will sync later':'Sign in with your email to enable sync');return finish(u,p,a,true)}
+  err(!navigator.onLine?'No connection. Offline sign-in only works on a device you have signed in on before.':'Wrong email or password.');
+ }catch(x){err('Something went wrong. Try again.')}
+}
+async function forgot(){
+ const u=$('a_u').value.trim().toLowerCase(),err=m=>{$('aErr').textContent=m};
+ if(!u.includes('@'))return err('Enter your email above, then press Forgot password.');
+ if(!sb||!navigator.onLine)return err('Resetting a password needs an internet connection.');
+ const {error}=await sb.auth.resetPasswordForEmail(u,{redirectTo:location.origin+location.pathname});
+ if(error)return err(msgOf(error));err('');toast('Reset link sent to '+u);
+}
+function logout(){try{localStorage.removeItem(SK);sessionStorage.removeItem(SK)}catch(e){}location.reload()}
+if(sb)sb.auth.onAuthStateChange(async(ev,ss)=>{
+ if(ev==='PASSWORD_RECOVERY'&&ss){const np=prompt('Set a new password (at least 6 characters):');
+  if(np&&np.length>=6){const {error}=await sb.auth.updateUser({password:np});if(error)return toast(error.message);toast('Password updated');$('a_r').checked=true;await finish(ss.user.email.toLowerCase(),np,getAcct())}}});
+// ---- Sync queue ----
+const getQ=()=>{try{return JSON.parse(localStorage.getItem('bbQ'))||[]}catch(e){return[]}},setQ=q=>{try{localStorage.setItem('bbQ',JSON.stringify(q))}catch(e){}};
+const ld=t=>{try{return JSON.parse(localStorage.getItem('stockData_'+t))||[]}catch(e){return[]}},sd=(t,d)=>{try{localStorage.setItem('stockData_'+t,JSON.stringify(d))}catch(e){}};
+function enq(op){setQ([...getQ(),op]);syncNow()}
+const ok=async p=>{const {error}=await p;if(error)throw error};
+async function runOp(o){
+ if(o.a==='ur'){const r=ld(o.t).find(x=>x.id===o.id);if(r)await ok(sb.from('bb_records').upsert({user_id:UID,ticker:o.t,id:o.id,data:r,updated_at:new Date().toISOString()},{onConflict:'user_id,ticker,id'}))}
+ else if(o.a==='dr')await ok(sb.from('bb_records').delete().eq('ticker',o.t).eq('id',o.id));
+ else if(o.a==='uc'){if(config[o.t])await ok(sb.from('bb_stocks').upsert({user_id:UID,ticker:o.t,config:config[o.t]},{onConflict:'user_id,ticker'}))}
+ else if(o.a==='dc'){await ok(sb.from('bb_records').delete().eq('ticker',o.t));await ok(sb.from('bb_stocks').delete().eq('ticker',o.t))}
+}
+async function pull(){
+ if(getQ().length)return;
+ let rs=[];for(let f=0;;f+=1000){const {data,error}=await sb.from('bb_records').select('ticker,id,data').range(f,f+999);if(error)throw error;rs=rs.concat(data);if(data.length<1000)break}
+ const {data:ss,error}=await sb.from('bb_stocks').select('ticker,config');if(error)throw error;
+ const rc={};ss.forEach(x=>rc[x.ticker]={...x.config,custom:true});setCustom(rc);config={...base,...rc};
+ const by={};rs.forEach(r=>(by[r.ticker]=by[r.ticker]||[]).push(r.data));
+ Object.keys(config).forEach(t=>sd(t,by[t]||[]));
+ if(!config[cur])cur='MAJOR';
+ render();if(selId&&prep().some(x=>x.id===selId))showDetails(selId);else autoSelect();
+}
+async function syncNow(){
+ if(syncing)return;if(!sb){setSync('Offline');return}
+ syncing=true;setSync('Syncing…');
+ try{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){setSync('Not synced · sign in again to sync');return}
+  UID=session.user.id;
+  if(localStorage.getItem('bbMig_'+UID)!=='1'){
+   const q=getQ();Object.keys(config).forEach(t=>{ld(t).forEach(r=>q.push({a:'ur',t,id:r.id}));if(config[t].custom)q.push({a:'uc',t})});setQ(q);
+  }
+  let q;while((q=getQ()).length){await runOp(q[0]);setQ(getQ().slice(1))}
+  localStorage.setItem('bbMig_'+UID,'1');
+  await pull();setSync('Synced · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+ }catch(e){setSync('Offline · will sync later')}finally{syncing=false}
+}
+addEventListener('online',syncNow);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('auth').classList.contains('off'))syncNow()});
+setInterval(()=>{if(!document.hidden&&$('auth').classList.contains('off'))syncNow()},60000);
+$('r_date').valueAsDate=new Date();render();autoSelect();authInit();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
