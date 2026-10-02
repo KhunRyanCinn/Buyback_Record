@@ -5,6 +5,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
 :root{--bg:#f2f3f1;--card:#fff;--ink:#151515;--mut:#8b9088;--line:#ececea;--soft:#f6f6f4;--g:#8cc68a;--gi:#3e9a45;--o:#f28b3c;--r:#e5484d;--pill-g:#dff0de;--pill-o:#fde6d3}
@@ -86,9 +87,10 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
 .abox{width:min(380px,100%);display:flex;flex-direction:column;gap:14px;padding:28px}.abox h2{font-size:22px;font-weight:800}.abox p{color:var(--mut);font-size:13px;margin-top:-8px}
 .abox input[type=text],.abox input[type=password]{width:100%;padding:10px 12px;border-radius:11px;border:1px solid var(--line);background:var(--card);outline:0;transition:.15s}
 .chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--ink);margin:0;cursor:pointer}.chk input{width:16px;height:16px;accent-color:var(--gi)}
+.sync{font-size:12px;color:var(--mut);padding:0 14px 4px}
 .err{color:var(--r);font-size:12.5px;min-height:16px}
 .lnk{background:none;border:0;color:var(--mut);font-size:12.5px;cursor:pointer;text-decoration:underline;align-self:center}
-#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,30px);background:#151515;color:#fff;padding:11px 20px;border-radius:30px;opacity:0;transition:.3s;z-index:100;pointer-events:none}#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,30px);background:#151515;color:#fff;padding:11px 20px;border-radius:30px;opacity:0;transition:.3s;z-index:300;pointer-events:none}#toast.on{opacity:1;transform:translate(-50%,0)}
 @media(max-width:1100px){.grid2,.grid3,.fgrid{grid-template-columns:1fr}}
 @media(max-width:700px){.dwrap{grid-template-columns:1fr}}
 @media(max-width:800px){body{flex-direction:column}.side{width:100%;height:auto;position:static}.promo,.grp{display:none}.cos{flex-direction:row;flex-wrap:wrap}}
@@ -96,13 +98,14 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
 </style></head>
 <body>
 <div class="auth" id="auth"><form class="card abox" id="aForm" onsubmit="authSubmit(event)">
- <h2 id="aTitle">Sign in</h2><p id="aSub">Buyback Tracker</p>
- <div><label for="a_u">Username</label><input type="text" id="a_u" name="username" autocomplete="username" required></div>
+ <h2 id="aTitle">Sign in</h2><p id="aSub"></p>
+ <div><label for="a_u">Email</label><input type="text" id="a_u" name="username" autocomplete="username" inputmode="email" required></div>
  <div><label for="a_p">Password</label><input type="password" id="a_p" name="password" autocomplete="current-password" required></div>
  <div id="a_cwrap" style="display:none"><label for="a_c">Confirm password</label><input type="password" id="a_c" autocomplete="new-password"></div>
  <label class="chk"><input type="checkbox" id="a_r" checked> Keep me signed in on this device</label>
  <div class="err" id="aErr" role="alert"></div>
  <button class="btn sub" id="aBtn">Sign in</button>
+ <button type="button" class="lnk" id="aToggle" onclick="setMode(mode==='in'?'up':'in')"></button>
  <button type="button" class="lnk" id="aForgot" onclick="forgot()">Forgot password?</button>
 </form></div>
 <aside class="side">
@@ -113,6 +116,7 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
  <div class="grp">Other menu</div>
  <button class="nav" onclick="openNote()"><i class="fas fa-pen-to-square"></i> New note</button>
  <button class="nav" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Log out</button>
+ <div class="sync" id="sync"></div>
  <div class="promo"><b>Target progress</b><small id="pSub"></small><div class="bar"><i id="pBar"></i></div><button class="btn" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Export Excel</button></div>
  <div class="mode"><button id="mL" onclick="setTheme(0)"><i class="fas fa-sun"></i> Light</button><button id="mD" onclick="setTheme(1)"><i class="fas fa-moon"></i> Dark</button></div>
 </aside>
@@ -191,9 +195,9 @@ function closeModal(){$('modal').classList.remove('on')}
 function addCo(e){e.preventDefault();const k=$('co_t').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
  if(!k)return;if(config[k]){toast(k+' already exists');return}
  config[k]={period:$('co_p').value||'-',maxShares:+$('co_s').value,maxBudget:+$('co_b').value,baseClose:+$('co_c').value,icon:'chart',custom:true};
- const c=getCustom();c[k]=config[k];setCustom(c);$('coForm').reset();closeModal();sw(k);toast(k+' added')}
+ const c=getCustom();c[k]=config[k];setCustom(c);enq({a:'uc',t:k});$('coForm').reset();closeModal();sw(k);toast(k+' added')}
 function delCo(k,ev){ev.stopPropagation();if(!confirm('Remove '+k+' and all of its records?'))return;
- const c=getCustom();delete c[k];setCustom(c);try{localStorage.removeItem('stockData_'+k)}catch(e){}delete config[k];
+ const c=getCustom();delete c[k];setCustom(c);enq({a:'dc',t:k});try{localStorage.removeItem('stockData_'+k)}catch(e){}delete config[k];
  if(cur===k)sw('MAJOR');else renderNav();toast(k+' removed')}
 function mk(id,cfg){if(CH[id])CH[id].destroy();CH[id]=new Chart($(id),cfg)}
 function spark(id,vals,col){if(vals.length<2)vals=[0,...vals,...(vals.length?[]:[0])];mk(id,{type:'line',data:{labels:vals.map((_,i)=>i),datasets:[{data:vals,borderColor:col,borderWidth:2,tension:.4,pointRadius:0,pointHoverRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}})}
@@ -231,12 +235,13 @@ function showDetails(id){
  ${i.notes?`<div class="note">${esc(i.notes)}</div>`:''}<div class="imgs">${(i.images||[]).map((s,k)=>`<img src="${s}" onclick="openLb(${id},${k})">`).join('')}</div></div>`;
  mk('dn',{type:'doughnut',data:{labels:['Buyback volume','Other market volume'],datasets:[{data:[i.bb_vol,rest],backgroundColor:[css('--g'),css('--soft')],borderWidth:0,hoverOffset:6}]},options:{cutout:'68%',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:css('--mut'),usePointStyle:true,boxWidth:8}}}}});
 }
+const shrink=f=>new Promise(res=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const k=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.7))};im.onerror=()=>res(b64(f));im.src=u});
 const b64=f=>new Promise((r,j)=>{const x=new FileReader();x.onload=()=>r(x.result);x.onerror=j;x.readAsDataURL(f)});
 async function saveData(e){
- e.preventDefault();const f=$('r_images').files;let imgs=f.length?await Promise.all([...f].map(b64)):(editingId?editImgs:[]);
+ e.preventDefault();const f=$('r_images').files;let imgs=f.length?await Promise.all([...f].map(shrink)):(editingId?editImgs:[]);
  const v=k=>$(k).value,r={id:editingId||Date.now(),dateRaw:v('r_date'),dateFormatted:fullDate(v('r_date')),bb_vol:+v('bb_vol'),bb_high:v('bb_high'),bb_low:v('bb_low'),bb_val:v('bb_val'),m_open:v('m_open'),m_high:v('m_high'),m_low:v('m_low'),m_close:v('m_close'),m_vol:+v('m_vol'),set_index:v('set_index'),notes:v('r_notes'),images:imgs};
  const d=load();if(editingId){const x=d.findIndex(a=>a.id===editingId);if(x>-1)d[x]=r}else d.push(r);
- store(d);const was=editingId;closeNote();render();showDetails(r.id);toast(was?'Record updated':'Record saved');
+ store(d);enq({a:'ur',t:cur,id:r.id});const was=editingId;closeNote();render();showDetails(r.id);toast(was?'Record updated':'Record saved');
 }
 function editRecord(id,ev){ev.stopPropagation();const i=load().find(x=>x.id===id);if(!i)return;
  ['bb_vol','bb_high','bb_low','bb_val','m_open','m_high','m_low','m_close','m_vol'].forEach(k=>$(k).value=i[k]||'');
@@ -248,7 +253,7 @@ function openNote(){cancelEdit();showNote()}
 function closeNote(){cancelEdit();$('noteOv').classList.remove('on')}
 function cancelEdit(){editingId=null;editImgs=[];document.querySelector('#form form').reset();$('r_date').valueAsDate=new Date();$('set_index').value='0';$('btnSubmit').textContent='Save record';$('fTitle').textContent='New note';upFname();$('editImg').style.display='none'}
 function deleteRecord(id,ev){ev.stopPropagation();if(!confirm('Are you sure you want to delete this record?'))return;
- store(load().filter(x=>x.id!==id));if(editingId===id)cancelEdit();if(selId===id)selId=null;render();autoSelect();toast('Record deleted')}
+ store(load().filter(x=>x.id!==id));enq({a:'dr',t:cur,id});if(editingId===id)cancelEdit();if(selId===id)selId=null;render();autoSelect();toast('Record deleted')}
 function openLb(id,k){gal=load().find(x=>x.id===id).images;gi=k;upLb();$('lb').style.display='flex'}
 function chImg(n,e){e.stopPropagation();gi=(gi+n+gal.length)%gal.length;upLb()}
 function upLb(){$('lbi').src=gal[gi];$('lbc').textContent=(gi+1)+' / '+gal.length;document.querySelectorAll('.lbn').forEach(x=>x.style.display=gal.length>1?'block':'none')}
@@ -266,48 +271,116 @@ function exportToExcel(){
  const d=prep();if(!d.length){toast('No data available to export');return}
  const rows=d.map(i=>({"Date":i.dateFormatted,"Buyback Volume":i.bb_vol,"Buyback High":i.bb_high,"Buyback Low":i.bb_low,"Buyback Value":i.bb_val,"Market Open":i.m_open,"Market High":i.m_high,"Market Low":i.m_low,"Market Close":i.m_close,"% Change":i.pct.toFixed(2)+'%',"Market Volume":i.m_vol,"SET Points":i.set_index,"Notes":i.notes}));
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),cur+' Data');XLSX.writeFile(wb,cur+'_Buyback_Records.xlsx')}
-// ---- Login (local, works offline) ----
+// ---- Supabase (cloud sync + login). Local copy stays the working store, so everything works offline. ----
+const SUPA_URL='https://bnjjzepzwcagsdecpovl.supabase.co',SUPA_KEY='sb_publishable_9Zsx9XgwhzuYMcgxjt8MzA_lHa81iim';
+const sb=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_KEY):null;
 const AK='bbAuth',SK='bbSession',LU='bbLastUser';
+let mode='in',syncing=false,UID=null;
 const b64e=b=>btoa(String.fromCharCode(...new Uint8Array(b))),b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function hashPw(pw,salt){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);return b64e(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},k,256))}
 const getAcct=()=>{try{return JSON.parse(localStorage.getItem(AK))}catch(e){return null}};
+const isNet=e=>!e||e.status===0||/fetch|network/i.test(e.message||'')||!navigator.onLine;
+const msgOf=e=>/invalid login/i.test(e.message)?'Wrong email or password.':e.message;
+const setSync=t=>{$('sync').textContent=t};
 function sessionOk(a){try{const s=JSON.parse(localStorage.getItem(SK));if(s&&s.u===a.u&&s.exp>Date.now())return true}catch(e){}try{return sessionStorage.getItem(SK)===a.u}catch(e){return false}}
-function unlock(u){$('auth').classList.add('off')}
+function unlock(){$('auth').classList.add('off');syncNow()}
+function setMode(m){mode=m;const up=m==='up';
+ $('aTitle').textContent=up?'Create account':'Sign in';
+ $('aSub').textContent=up?'Use your email. Your records sync across devices.':'Works offline on devices you have signed in on before.';
+ $('a_cwrap').style.display=up?'block':'none';$('a_c').required=up;$('a_p').autocomplete=up?'new-password':'current-password';
+ $('aBtn').textContent=up?'Create account':'Sign in';$('aToggle').textContent=up?'Already have an account? Sign in':'New here? Create account';
+ $('aForgot').style.display=up?'none':'';$('aErr').textContent=''}
 function authInit(){
- const a=getAcct(),setup=!a;
- $('aTitle').textContent=setup?'Create account':'Sign in';
- $('aSub').textContent=setup?'Choose a username and password for this device. They work offline.':'Welcome back.';
- $('a_cwrap').style.display=setup?'block':'none';$('a_c').required=setup;
- $('a_p').autocomplete=setup?'new-password':'current-password';
- $('aBtn').textContent=setup?'Create account':'Sign in';$('aForgot').style.display=setup?'none':'';
- try{if(!setup)$('a_u').value=localStorage.getItem(LU)||''}catch(e){}
- if(a&&sessionOk(a)){unlock(a.u);return}
- $('auth').classList.remove('off');setTimeout(()=>($('a_u').value&&!setup?$('a_p'):$('a_u')).focus(),50);
+ const a=getAcct();setMode('in');
+ try{$('a_u').value=localStorage.getItem(LU)||''}catch(e){}
+ if(a&&sessionOk(a)){unlock();return}
+ $('auth').classList.remove('off');setTimeout(()=>($('a_u').value?$('a_p'):$('a_u')).focus(),50);
+}
+function wipeLocal(){try{Object.keys(localStorage).filter(k=>/^(stockData_|bbMig_)/.test(k)||k==='bbCustom'||k==='bbQ').forEach(k=>localStorage.removeItem(k))}catch(e){}config={...base};cur='MAJOR';selId=null}
+async function finish(u,p,a,off){
+ if(!off){
+  if(a&&a.u.includes('@')&&a.u.toLowerCase()!==u)wipeLocal();
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  try{localStorage.setItem(AK,JSON.stringify({u,s:b64e(salt),h:await hashPw(p,salt)}))}catch(x){}
+ }
+ const cu=off?a.u:u;
+ try{localStorage.setItem(LU,cu)}catch(x){}
+ try{if($('a_r').checked)localStorage.setItem(SK,JSON.stringify({u:cu,exp:Date.now()+30*864e5}));else{localStorage.removeItem(SK);sessionStorage.setItem(SK,cu)}}catch(x){}
+ $('a_p').value='';$('a_c').value='';unlock();
 }
 async function authSubmit(e){
- e.preventDefault();const u=$('a_u').value.trim(),p=$('a_p').value,err=m=>{$('aErr').textContent=m};err('');
- if(!window.crypto||!crypto.subtle){err('This browser cannot run secure login. Use a recent Chrome, Edge, Safari or Firefox over https.');return}
- let a=getAcct();
- if(!a){
-  if(u.length<2)return err('Username must be at least 2 characters.');
-  if(p.length<6)return err('Password must be at least 6 characters.');
-  if(p!==$('a_c').value)return err('Passwords do not match.');
-  const salt=crypto.getRandomValues(new Uint8Array(16));a={u,s:b64e(salt),h:await hashPw(p,salt)};
-  try{localStorage.setItem(AK,JSON.stringify(a))}catch(x){return err('Cannot save: storage is unavailable.')}
- }else{
-  const ok=u.toLowerCase()===a.u.toLowerCase()&&await hashPw(p,b64d(a.s))===a.h;
-  if(!ok){err('Wrong username or password.');$('a_p').value='';return}
- }
- try{localStorage.setItem(LU,a.u)}catch(x){}
- try{if($('a_r').checked)localStorage.setItem(SK,JSON.stringify({u:a.u,exp:Date.now()+30*864e5}));else{localStorage.removeItem(SK);sessionStorage.setItem(SK,a.u)}}catch(x){}
- $('a_p').value='';$('a_c').value='';unlock(a.u);
+ e.preventDefault();const u=$('a_u').value.trim().toLowerCase(),p=$('a_p').value,err=m=>{$('aErr').textContent=m};err('');
+ if(!(window.crypto&&crypto.subtle))return err('This browser cannot run secure login. Use a recent browser over https.');
+ const a=getAcct(),local=async()=>!!a&&u===a.u.toLowerCase()&&await hashPw(p,b64d(a.s))===a.h;
+ try{
+  if(mode==='up'){
+   if(!/^\S+@\S+\.\S+$/.test(u))return err('Enter a valid email address.');
+   if(p.length<6)return err('Password must be at least 6 characters.');
+   if(p!==$('a_c').value)return err('Passwords do not match.');
+   if(!sb||!navigator.onLine)return err('Creating an account needs an internet connection.');
+   const {data,error}=await sb.auth.signUp({email:u,password:p});
+   if(error)return err(msgOf(error));
+   if(!data.session){setMode('in');return err('Account created. Check your email to confirm it, then sign in.')}
+   return finish(u,p,a);
+  }
+  if(sb&&u.includes('@')){
+   const {error}=await sb.auth.signInWithPassword({email:u,password:p});
+   if(!error)return finish(u,p,a);
+   if(!isNet(error))return err(msgOf(error));
+  }
+  if(await local()){setSync(u.includes('@')?'Offline · will sync later':'Sign in with your email to enable sync');return finish(u,p,a,true)}
+  err(!navigator.onLine?'No connection. Offline sign-in only works on a device you have signed in on before.':'Wrong email or password.');
+ }catch(x){err('Something went wrong. Try again.')}
+}
+async function forgot(){
+ const u=$('a_u').value.trim().toLowerCase(),err=m=>{$('aErr').textContent=m};
+ if(!u.includes('@'))return err('Enter your email above, then press Forgot password.');
+ if(!sb||!navigator.onLine)return err('Resetting a password needs an internet connection.');
+ const {error}=await sb.auth.resetPasswordForEmail(u,{redirectTo:location.origin+location.pathname});
+ if(error)return err(msgOf(error));err('');toast('Reset link sent to '+u);
 }
 function logout(){try{localStorage.removeItem(SK);sessionStorage.removeItem(SK)}catch(e){}location.reload()}
-function forgot(){
- if(prompt('Reset login for this device?\nThis erases the saved login AND all records stored on this device. Export to Excel first if you need them.\nType RESET to continue.')!=='RESET')return;
- try{Object.keys(localStorage).filter(k=>k.startsWith('stockData_')||[AK,SK,'bbCustom',LU].includes(k)).forEach(k=>localStorage.removeItem(k));sessionStorage.clear()}catch(e){}
- location.reload();
+if(sb)sb.auth.onAuthStateChange(async(ev,ss)=>{
+ if(ev==='PASSWORD_RECOVERY'&&ss){const np=prompt('Set a new password (at least 6 characters):');
+  if(np&&np.length>=6){const {error}=await sb.auth.updateUser({password:np});if(error)return toast(error.message);toast('Password updated');$('a_r').checked=true;await finish(ss.user.email.toLowerCase(),np,getAcct())}}});
+// ---- Sync queue ----
+const getQ=()=>{try{return JSON.parse(localStorage.getItem('bbQ'))||[]}catch(e){return[]}},setQ=q=>{try{localStorage.setItem('bbQ',JSON.stringify(q))}catch(e){}};
+const ld=t=>{try{return JSON.parse(localStorage.getItem('stockData_'+t))||[]}catch(e){return[]}},sd=(t,d)=>{try{localStorage.setItem('stockData_'+t,JSON.stringify(d))}catch(e){}};
+function enq(op){setQ([...getQ(),op]);syncNow()}
+const ok=async p=>{const {error}=await p;if(error)throw error};
+async function runOp(o){
+ if(o.a==='ur'){const r=ld(o.t).find(x=>x.id===o.id);if(r)await ok(sb.from('bb_records').upsert({user_id:UID,ticker:o.t,id:o.id,data:r,updated_at:new Date().toISOString()},{onConflict:'user_id,ticker,id'}))}
+ else if(o.a==='dr')await ok(sb.from('bb_records').delete().eq('ticker',o.t).eq('id',o.id));
+ else if(o.a==='uc'){if(config[o.t])await ok(sb.from('bb_stocks').upsert({user_id:UID,ticker:o.t,config:config[o.t]},{onConflict:'user_id,ticker'}))}
+ else if(o.a==='dc'){await ok(sb.from('bb_records').delete().eq('ticker',o.t));await ok(sb.from('bb_stocks').delete().eq('ticker',o.t))}
 }
+async function pull(){
+ if(getQ().length)return;
+ let rs=[];for(let f=0;;f+=1000){const {data,error}=await sb.from('bb_records').select('ticker,id,data').range(f,f+999);if(error)throw error;rs=rs.concat(data);if(data.length<1000)break}
+ const {data:ss,error}=await sb.from('bb_stocks').select('ticker,config');if(error)throw error;
+ const rc={};ss.forEach(x=>rc[x.ticker]={...x.config,custom:true});setCustom(rc);config={...base,...rc};
+ const by={};rs.forEach(r=>(by[r.ticker]=by[r.ticker]||[]).push(r.data));
+ Object.keys(config).forEach(t=>sd(t,by[t]||[]));
+ if(!config[cur])cur='MAJOR';
+ render();if(selId&&prep().some(x=>x.id===selId))showDetails(selId);else autoSelect();
+}
+async function syncNow(){
+ if(syncing)return;if(!sb){setSync('Offline');return}
+ syncing=true;setSync('Syncing…');
+ try{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){setSync('Not synced · sign in again to sync');return}
+  UID=session.user.id;
+  if(localStorage.getItem('bbMig_'+UID)!=='1'){
+   const q=getQ();Object.keys(config).forEach(t=>{ld(t).forEach(r=>q.push({a:'ur',t,id:r.id}));if(config[t].custom)q.push({a:'uc',t})});setQ(q);
+  }
+  let q;while((q=getQ()).length){await runOp(q[0]);setQ(getQ().slice(1))}
+  localStorage.setItem('bbMig_'+UID,'1');
+  await pull();setSync('Synced · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+ }catch(e){setSync('Offline · will sync later')}finally{syncing=false}
+}
+addEventListener('online',syncNow);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('auth').classList.contains('off'))syncNow()});
+setInterval(()=>{if(!document.hidden&&$('auth').classList.contains('off'))syncNow()},60000);
 $('r_date').valueAsDate=new Date();render();autoSelect();authInit();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
