@@ -114,17 +114,16 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
 @media(max-width:700px){.dwrap{grid-template-columns:1fr}}
 @media(max-width:800px){.rounds,.nav .chev{display:none}body{flex-direction:column}.side{width:100%;height:auto;position:static}.promo,.grp{display:none}.cos{flex-direction:row;flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-.pricewrap{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+.pricewrap{display:grid;grid-template-columns:2fr 1fr;gap:10px}
 .pricecard{display:flex;flex-direction:column}
-.pricechart{height:260px;margin-top:10px;flex:1}
-.ministats{display:flex;flex-direction:column;gap:14px}
-.stat.mini{padding:14px 16px}
-.stat.mini .lbl{font-size:12px}
-.stat.mini .big{font-size:18px;margin:4px 0 6px}
-.stat.mini .spark{height:38px;margin:4px 0}
-.stat.mini .foot{font-size:11px}
-@media(max-width:1100px){.pricewrap{grid-template-columns:1fr}}
-</style></head>
+.pricechart{height:180px;margin-top:6px;flex:1}
+.ministats{display:flex;flex-direction:column;gap:8px}
+.stat.mini{padding:8px 12px}
+.stat.mini .lbl{font-size:11px}
+.stat.mini .big{font-size:16px;margin:2px 0 4px}
+.stat.mini .spark{height:26px;margin:2px 0}
+.stat.mini .foot{font-size:10px}
+@media(max-width:1100px){.pricewrap{grid-template-columns:1fr}}</style></head>
 <body>
 <div class="auth" id="auth"><form class="card abox" id="aForm" onsubmit="authSubmit(event)">
  <h2 id="aTitle">Sign in</h2><p id="aSub"></p>
@@ -854,7 +853,8 @@ function renderPriceChart(pj){
  const buyVols=pj.map(i=>+i.bb_vol||0);
  const G=css('--g'),GI=css('--gi'),MUT=css('--mut'),LINE=css('--line');
  const dark=document.body.classList.contains('dark');
- mk('priceChart',{type:'line',data:{labels:dates,datasets:[{label:'Close price',data:prices,borderColor:GI,backgroundColor:dark?'rgba(140,198,138,.18)':'rgba(140,198,138,.2)',borderWidth:2,tension:.3,spanGaps:true,fill:true,pointRadius:(c)=>buyVols[c.dataIndex]>0?3:0,pointBackgroundColor:G,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>'Close ฿'+(+c.parsed.y).toFixed(2)}}},scales:{x:{ticks:{maxTicksLimit:8,color:MUT},grid:{display:false}},y:{ticks:{color:MUT,callback:v=>'฿'+v},grid:{color:LINE}}}}});
+ mk('priceChart',{type:'line',data:{labels:dates,datasets:[{label:'Close price',data:prices,borderColor:GI,backgroundColor:dark?'rgba(140,198,138,.18)':'rgba(140,198,138,.2)',borderWidth:2,tension:.3,spanGaps:true,fill:true,pointRadius:(c)=>buyVols[c.dataIndex]>0?3:0,pointBackgroundColor:G,pointHoverRadius:5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>'Close ฿'+(+c.parsed.y).toFixed(2)}}},scales:{x:{ticks:{maxTicksLimit:8,color:MUT},grid:{display:false}},y:{ticks:{color:MUT,callback:v=>'฿'+(+v).toFixed(2)
+},grid:{color:LINE}}}}});
  $('priceRange').textContent=pj.length?('From '+(pj[0].dateFormatted||pj[0].dateRaw)+' to '+(pj[pj.length-1].dateFormatted||pj[pj.length-1].dateRaw)):'No data yet';
 }
 function renderList(){
