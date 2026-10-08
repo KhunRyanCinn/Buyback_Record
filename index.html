@@ -175,6 +175,29 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
 .note{font-size:16.5px;line-height:1.65;padding:14px 16px}
 .imgs img{width:96px;height:96px}
 @media(max-width:700px){.cmp{grid-template-columns:1fr}}
+
+.grph{display:flex;align-items:center;justify-content:space-between}
+.grpbtn{border:0;background:none;color:var(--o);font-size:12px;font-weight:700;cursor:pointer;padding:2px 8px;border-radius:8px}.grpbtn:hover{background:var(--soft)}
+.mvs{flex:none;width:34px;display:flex;flex-direction:column;gap:2px}
+.mv{flex:1;border:0;border-radius:8px;background:var(--soft);color:var(--ink);cursor:pointer;font-size:10px;display:grid;place-items:center}.mv:hover:not(:disabled){background:var(--g);color:#14281a}.mv:disabled{opacity:.3;cursor:default}
+.ministats{gap:6px}.ministats .stat.mini{padding:6px 14px;flex:none;display:block}
+.mini .mh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mini .mh .pill{padding:2px 10px;font-size:11px}
+.mini .mrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:2px}
+.mini .big{font-size:18px;margin:0;white-space:nowrap}.mini .foot{font-size:11px;text-align:right}
+.ministats .stat.mini.ret{flex:1 1 auto;display:flex;flex-direction:column;padding:6px 12px 8px}
+.ret .lbl i{color:var(--o);margin-right:4px}
+.rbase{font-size:11.5px;color:var(--mut);margin:1px 0 4px}.rbase b{color:var(--ink)}
+.rrows{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:3px}
+.rr{display:grid;grid-template-columns:48px 76px 1fr;align-items:baseline;gap:6px;background:var(--soft);border-radius:10px;padding:3px 10px}
+.rl{font-size:12.5px;color:var(--mut);font-weight:600}.rr b{font-size:15.5px}.rr small{font-size:11.5px;color:var(--mut);text-align:right;white-space:nowrap}
+@media(min-width:1101px){
+ .pricewrap,.grid2{grid-template-columns:2fr 1fr;gap:14px}
+ .grid2{height:auto;flex:1 1 0;min-height:0}
+ .pricewrap{min-height:0}
+ .ministats{overflow-y:auto;scrollbar-width:thin}
+}
+@media(max-width:1100px){.ministats{display:grid;grid-template-columns:1fr 1fr}.ministats .ret{grid-column:1/-1}}
 </style></head>
 <body>
 <div class="auth" id="auth"><form class="card abox" id="aForm" onsubmit="authSubmit(event)">
@@ -190,7 +213,7 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
 </form></div>
 <aside class="side">
  <div class="logo"><i class="fas fa-chart-line"></i> Buyback Tracker</div>
- <div class="grp">Companies</div>
+ <div class="grp grph"><span>Companies</span><button type="button" class="grpbtn" id="ordBtn" onclick="toggleOrd()">Edit</button></div>
  <div class="cos" id="cos"></div>
  <button class="nav addco" onclick="openModal()"><i class="fas fa-plus"></i> Add stock</button>
  <div class="grp">Other menu</div>
@@ -211,9 +234,10 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
   <div class="pricechart"><canvas id="priceChart"></canvas></div>
  </div>
  <div class="ministats">
-  <div class="card stat mini"><div class="lbl">Total bought (shares)</div><div class="big" id="s1">0</div><span class="pill pg" id="p1">0%</span><div class="spark"><canvas id="c1"></canvas></div><div class="foot" id="f1"></div></div>
-  <div class="card stat mini"><div class="lbl">Total spent (THB)</div><div class="big" id="s2">0</div><span class="pill po" id="p2">0%</span><div class="spark"><canvas id="c2"></canvas></div><div class="foot" id="f2"></div></div>
-  <div class="card stat mini"><div class="lbl">Share of market volume</div><div class="big" id="s3">0%</div><span class="pill pg" id="p3">-</span><div class="spark"><canvas id="c3"></canvas></div><div class="foot" id="f3"></div></div>
+  <div class="card stat mini"><div class="mh"><span class="lbl">Total bought (shares)</span><span class="pill pg" id="p1">0%</span></div><div class="mrow"><div class="big" id="s1">0</div><div class="foot" id="f1"></div></div></div>
+  <div class="card stat mini"><div class="mh"><span class="lbl">Total spent (THB)</span><span class="pill po" id="p2">0%</span></div><div class="mrow"><div class="big" id="s2">0</div><div class="foot" id="f2"></div></div></div>
+  <div class="card stat mini"><div class="mh"><span class="lbl">Share of market volume</span><span class="pill pg" id="p3">-</span></div><div class="mrow"><div class="big" id="s3">0%</div><div class="foot" id="f3"></div></div></div>
+  <div class="card stat mini ret"><div class="mh"><span class="lbl"><i class="fas fa-chart-line"></i> Return since first buyback</span></div><div class="rbase" id="rBase"></div><div class="rrows" id="rRows"></div></div>
  </div>
 </div>
  <div class="grid2">
@@ -857,17 +881,24 @@ const sf=v=>v===''||v==null||isNaN(+v)?'-':(+v>0?'+':'')+(+v);
 const fullDate=d=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T00:00:00'));
 function setTheme(d){document.body.classList.toggle('dark',!!d);try{localStorage.setItem('bbTheme',d?'d':'l')}catch(e){}render();if(selId)showDetails(selId)}
 try{if(localStorage.getItem('bbTheme')==='d')document.body.classList.add('dark')}catch(e){}
-function sw(c){cancelEdit();cur=c;view='cur';selId=null;render();autoSelect()}
+function saveNav(){try{localStorage.setItem('bbNav',JSON.stringify({c:cur,v:view}))}catch(e){}}
+function restoreNav(){try{const n=JSON.parse(localStorage.getItem('bbNav'));if(n&&config[n.c]){cur=n.c;view=n.v==='cur'||(HIST[n.c]||[]).some(r=>r.id===n.v)?n.v:'cur';treeOpen=!!HIST[cur]&&view!=='cur'}}catch(e){}}
+function sw(c){cancelEdit();cur=c;view='cur';selId=null;saveNav();render();autoSelect()}
 function setF(b){filt=b.dataset.f;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));renderList()}
 const short=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?Math.round(n/1e3)+'K':String(n);
 function roundInfo(k){const out=[{id:'cur',label:config[k].roundLabel||'Current round',period:config[k].period,cur:true}];
  (HIST[k]||[]).slice().reverse().forEach(R=>{let n=0,sh=0;R.rows.forEach(a=>{if(a[1]){n++;sh+=a[1]}});out.push({id:R.id,label:R.label,period:R.period,days:n,shares:sh})});return out}
 function roundItems(k){return roundInfo(k).map(r=>`<button class="rnd ${k===cur&&view===r.id?'on':''}" role="menuitem" onclick="goRound('${k}','${r.id}')"><b>${r.label}${r.cur?' <span class="tag">Current</span>':''}</b><small>${r.period}${r.cur?'':' · '+r.days+' buying days · '+short(r.shares)+' shares'}</small></button>`).join('')}
-function renderNav(){$('cos').innerHTML=Object.keys(config).map(k=>{const has=!!HIST[k],open=has&&k===cur&&treeOpen;
- return `<div><div class="corow"><button class="nav ${k===cur?'on':''} ${open?'open':''}" onclick="pickCo('${k}')"${has?` aria-expanded="${open}"`:''}><span>${k}</span>${has?'<i class="fas fa-chevron-down chev"></i>':''}${config[k].custom?`<span class="x" title="Remove" onclick="delCo('${k}',event)">&times;</span>`:''}</button><button type="button" class="newn" title="New note" aria-label="New note for ${k}" onclick="newNote('${k}',event)"><i class="fas fa-pen-to-square"></i></button></div>${open?`<div class="rounds">${roundItems(k)}</div>`:''}</div>`}).join('');
+let ordMode=false;
+function coKeys(){let o=[];try{o=JSON.parse(localStorage.getItem('bbOrder'))||[]}catch(e){}const all=Object.keys(config);return[...o.filter(k=>all.includes(k)),...all.filter(k=>!o.includes(k))]}
+function toggleOrd(){ordMode=!ordMode;renderNav()}
+function moveCo(k,d,ev){ev.stopPropagation();const a=coKeys(),i=a.indexOf(k),j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];try{localStorage.setItem('bbOrder',JSON.stringify(a))}catch(e){}renderNav()}
+function renderNav(){const ks=coKeys();$('ordBtn').textContent=ordMode?'Done':'Edit';$('cos').classList.toggle('ord',ordMode);
+ $('cos').innerHTML=ks.map((k,n)=>{const has=!!HIST[k],open=has&&k===cur&&treeOpen&&!ordMode;
+ return `<div><div class="corow"><button class="nav ${k===cur?'on':''} ${open?'open':''}" onclick="pickCo('${k}')"${has?` aria-expanded="${open}"`:''}><span>${k}</span>${has?'<i class="fas fa-chevron-down chev"></i>':''}${config[k].custom&&!ordMode?`<span class="x" title="Remove" onclick="delCo('${k}',event)">&times;</span>`:''}</button>${ordMode?`<div class="mvs"><button type="button" class="mv" aria-label="Move ${k} up" ${n===0?'disabled':''} onclick="moveCo('${k}',-1,event)"><i class="fas fa-chevron-up"></i></button><button type="button" class="mv" aria-label="Move ${k} down" ${n===ks.length-1?'disabled':''} onclick="moveCo('${k}',1,event)"><i class="fas fa-chevron-down"></i></button></div>`:`<button type="button" class="newn" title="New note" aria-label="New note for ${k}" onclick="newNote('${k}',event)"><i class="fas fa-pen-to-square"></i></button>`}</div>${open?`<div class="rounds">${roundItems(k)}</div>`:''}</div>`}).join('');
  $('rmenu').innerHTML=HIST[cur]?roundItems(cur)+'<button class="rnd dl" role="menuitem" onclick="downloadHistory()"><b><i class="fas fa-download"></i> Download all rounds (.xlsx)</b></button>':''}
 function pickCo(k){if(k===cur){if(HIST[k]){treeOpen=!treeOpen;renderNav()}}else{treeOpen=!!HIST[k];sw(k)}}
-function goRound(k,id){cancelEdit();cur=k;view=id;selId=null;closeRM();render();autoSelect()}
+function goRound(k,id){cancelEdit();cur=k;view=id;selId=null;saveNav();closeRM();render();autoSelect()}
 function setRound(id){goRound(cur,id)}
 function toggleRM(e){e.stopPropagation();if(!HIST[cur])return;const on=$('rmenu').classList.toggle('on');$('titleBtn').setAttribute('aria-expanded',on)}
 function closeRM(){$('rmenu').classList.remove('on');$('titleBtn').setAttribute('aria-expanded','false')}
@@ -883,6 +914,20 @@ function delCo(k,ev){ev.stopPropagation();if(!confirm('Remove '+k+' and all of i
  if(cur===k)sw('MAJOR');else renderNav();toast(k+' removed')}
 function mk(id,cfg){if(CH[id])CH[id].destroy();CH[id]=new Chart($(id),cfg)}
 function spark(id,vals,col){if(vals.length<2)vals=[0,...vals,...(vals.length?[]:[0])];mk(id,{type:'line',data:{labels:vals.map((_,i)=>i),datasets:[{data:vals,borderColor:col,borderWidth:2,tension:.4,pointRadius:0,pointHoverRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}})}
+const dS=d=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'2-digit'}).format(new Date(d+'T00:00:00')),dayGap=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+function renderReturn(pj){
+ const fi=pj.findIndex(x=>+x.bb_vol>0);
+ if(fi<0){$('rBase').textContent='Waiting for the first buyback day';$('rRows').innerHTML='';return}
+ const f=pj[fi],base=+f.bb_val>0?f.bb_val/f.bb_vol:+f.m_close;
+ if(!(base>0)){$('rBase').textContent='No price on the first buyback day';$('rRows').innerHTML='';return}
+ let hi=null,lo=null,last=null;
+ pj.slice(fi).forEach(x=>{const h=+x.m_high||+x.m_close||0,l=+x.m_low||+x.m_close||0;
+  if(h&&(!hi||h>hi.v))hi={v:h,d:x.dateRaw};if(l&&(!lo||l<lo.v))lo={v:l,d:x.dateRaw};if(+x.m_close)last={v:+x.m_close,d:x.dateRaw}});
+ $('rBase').innerHTML='Base <b>฿'+base.toFixed(3)+'</b> · avg buy price on '+dS(f.dateRaw);
+ const row=(n,o)=>{if(!o)return '';const r=(o.v/base-1)*100,c=r>0?'var(--gi)':r<0?'var(--r)':'var(--mut)',g=dayGap(f.dateRaw,o.d);
+  return `<div class="rr"><span class="rl">${n}</span><b style="color:${c}">${r>0?'+':''}${r.toFixed(2)}%</b><small>฿${o.v.toFixed(2)} · ${dS(o.d)} · ${g} ${g===1?'day':'days'}</small></div>`};
+ $('rRows').innerHTML=row('High',hi)+row('Low',lo)+row('Latest',last);
+}
 function render(){
  const c=RM(),R=HR(),d=prep(),pj=d.filter(x=>!x.pre),G=css('--g'),O=css('--o'),dark=document.body.classList.contains('dark'),has=!!HIST[cur];
  renderNav();$('mL').classList.toggle('on',!dark);$('mD').classList.toggle('on',dark);
@@ -893,10 +938,10 @@ function render(){
  pj.forEach(i=>{const b=+i.bb_vol||0,sh=i.m_vol>0?b/i.m_vol*100:0;bought+=b;spent+=+i.bb_val||0;if(b>0){mv+=+i.m_vol||0;nb++;lastShare=sh}cv.push(bought);cs.push(spent);pr.push(sh)});
  const hasS=c.maxShares>0,hasB=c.maxBudget>0,pS=hasS?bought/c.maxShares*100:0,pB=hasB?spent/c.maxBudget*100:0,avg=bought?spent/bought:0;
  $('s1').textContent=fmt(bought);$('p1').textContent=hasS?pS.toFixed(2)+'% of target':'No target recorded';$('f1').innerHTML=hasS?'Remaining <b>'+fmt(c.maxShares-bought)+'</b> of '+fmt(c.maxShares):nb+' buying days';
- $('s2').textContent='฿'+money(spent);$('p2').textContent=hasB?pB.toFixed(2)+'% of budget':'No budget recorded';$('f2').innerHTML=hasB?'Remaining <b>฿'+money(c.maxBudget-spent)+'</b>'+(bought?' · avg ฿'+avg.toFixed(2):''):(bought?'Average price <b>฿'+avg.toFixed(2)+'</b>':'');
+ $('s2').textContent='฿'+money(spent);$('p2').textContent=hasB?pB.toFixed(2)+'% of budget':'No budget recorded';$('f2').innerHTML=hasB?'Remaining <b>฿'+Math.round(c.maxBudget-spent).toLocaleString()+'</b>'+(bought?' · avg ฿'+avg.toFixed(2):''):(bought?'Average price <b>฿'+avg.toFixed(2)+'</b>':'');
  $('s3').textContent=(mv?bought/mv*100:0).toFixed(2)+'%';$('p3').textContent=lastShare===null?'No data':'Latest '+lastShare.toFixed(2)+'%';$('f3').textContent=nb+' buying days of '+pj.length+' recorded';
  $('pSub').textContent=hasS?fmt(bought)+' / '+fmt(c.maxShares)+' shares':fmt(bought)+' shares bought';$('pBar').style.width=Math.min(100,pS)+'%';$('pBar').parentNode.style.visibility=hasS?'visible':'hidden';
- spark('c1',cv,G);spark('c2',cs,O);spark('c3',pr,G);renderPriceChart(pj);renderList();
+ renderReturn(pj);renderPriceChart(pj);renderList();
 }
 function renderPriceChart(pj){
  const dates=pj.map(i=>i.dateFormatted||i.dateRaw);
@@ -1020,7 +1065,7 @@ function authInit(){
  if(a&&sessionOk(a)){unlock();return}
  $('auth').classList.remove('off');setTimeout(()=>($('a_u').value?$('a_p'):$('a_u')).focus(),50);
 }
-function wipeLocal(){try{Object.keys(localStorage).filter(k=>/^(stockData_|bbMig_)/.test(k)||k==='bbCustom'||k==='bbQ').forEach(k=>localStorage.removeItem(k))}catch(e){}config={...base};cur='MAJOR';selId=null}
+function wipeLocal(){try{Object.keys(localStorage).filter(k=>/^(stockData_|bbMig_)/.test(k)||k==='bbCustom'||k==='bbQ').forEach(k=>localStorage.removeItem(k))}catch(e){}config={...base};cur='MAJOR';view='cur';selId=null;try{localStorage.removeItem('bbNav');localStorage.removeItem('bbOrder')}catch(e){}}
 async function finish(u,p,a,off){
  if(!off){
   if(a&&a.u.includes('@')&&a.u.toLowerCase()!==u)wipeLocal();
@@ -1085,7 +1130,7 @@ async function pull(){
  const rc={};ss.forEach(x=>rc[x.ticker]={...x.config,custom:true});setCustom(rc);config={...base,...rc};
  const by={};rs.forEach(r=>(by[r.ticker]=by[r.ticker]||[]).push(r.data));
  Object.keys(config).forEach(t=>sd(t,by[t]||[]));
- if(!config[cur])cur='MAJOR';
+ if(!config[cur]){cur='MAJOR';view='cur'}
  render();if(selId&&prep().some(x=>x.id===selId))showDetails(selId);else autoSelect();
 }
 async function syncNow(){
@@ -1105,6 +1150,6 @@ async function syncNow(){
 }
 addEventListener('online',syncNow);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('auth').classList.contains('off'))syncNow()});
 setInterval(()=>{if(!document.hidden&&$('auth').classList.contains('off'))syncNow()},60000);
-$('r_date').value=todayISO();render();autoSelect();authInit();
+$('r_date').value=todayISO();restoreNav();render();autoSelect();authInit();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
