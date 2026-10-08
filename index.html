@@ -198,6 +198,14 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
  .ministats{overflow-y:auto;scrollbar-width:thin}
 }
 @media(max-width:1100px){.ministats{display:grid;grid-template-columns:1fr 1fr}.ministats .ret{grid-column:1/-1}}
+
+.mtx{display:flex;align-items:center;gap:8px;min-width:0}.mtx i{margin:0!important;flex:none}
+.mlab.alt{display:none}.more.open .mlab.alt{display:inline}.more.open .mhl{display:none}
+.mhl{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcnt{font-style:normal;font-size:11.5px;font-weight:600;color:var(--mut);background:var(--card);border-radius:20px;padding:2px 10px;flex:none}
+.nhl{font-size:18px;font-weight:800;line-height:1.4;margin-top:8px;overflow-wrap:anywhere}
+.note{font-size:14.5px;font-weight:400;color:var(--mut);margin-top:6px}
+.imgbtn{margin-top:10px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;font-size:14px;padding:9px 16px;border-radius:12px;cursor:pointer}.imgbtn i{color:var(--o)}.imgbtn:hover{border-color:var(--g)}
 </style></head>
 <body>
 <div class="auth" id="auth"><form class="card abox" id="aForm" onsubmit="authSubmit(event)">
@@ -260,8 +268,10 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
      <div><label>Low</label><input type="number" step="0.01" id="m_low"></div><div><label>Close</label><input type="number" step="0.01" id="m_close"></div>
      <div><label>Market vol</label><input type="number" step="any" id="m_vol"></div><div><label>SET change (+/-)</label><input type="number" step="any" id="set_index"></div></div></div>
     <div class="fs" style="grid-column:1/-1"><h4><i class="fas fa-paperclip"></i> Additional info</h4>
+     <label for="r_hl">Highlight <span style="font-weight:500">(1 line)</span></label><input type="text" id="r_hl" maxlength="120" placeholder="Key point of the day, e.g. Profit +57%" style="margin-bottom:10px">
+     <label for="r_notes">Detail</label><textarea id="r_notes" rows="3" placeholder="More details (optional)" style="margin-bottom:10px"></textarea>
      <label>Attach images <span id="editImg" style="color:var(--o);display:none">(leave empty to keep existing)</span></label><div class="fpick"><input type="file" id="r_images" class="vh" accept="image/*" multiple onchange="upFname()"><label for="r_images" class="fbtn">Choose files</label><span id="fname">No file chosen</span></div>
-     <label>Notes</label><textarea id="r_notes" rows="2"></textarea></div>
+</div>
    </div>
    <button class="btn sub" id="btnSubmit">Save data</button>
    <button type="button" class="btn sub" style="margin-top:8px;background:var(--soft);color:var(--ink)" onclick="closeNote()">Cancel</button>
@@ -955,10 +965,10 @@ function renderPriceChart(pj){
 }
 function renderList(){
  const q=$('q').value.toLowerCase();let d=prep().reverse();
- d=d.filter(i=>(filt==='all'||(filt==='up'?i.pct>0:i.pct<0))&&(!q||(i.dateFormatted+' '+(i.notes||'')).toLowerCase().includes(q)));
+ d=d.filter(i=>(filt==='all'||(filt==='up'?i.pct>0:i.pct<0))&&(!q||(i.dateFormatted+' '+(i.hl||'')+' '+(i.notes||'')).toLowerCase().includes(q)));
  $('list').innerHTML=d.length?d.map(i=>{const p=i.pct,col=p>0?'var(--gi)':p<0?'var(--r)':'var(--mut)',s=Number(i.set_index)||0,none=!(i.bb_vol>0);
   const acts=i.hist?'':`<div class="acts"><button class="ib" aria-label="Edit" onclick="editRecord(${i.id},event)"><i class="fas fa-pen"></i></button><button class="ib d" aria-label="Delete" onclick="deleteRecord(${i.id},event)"><i class="fas fa-trash"></i></button></div>`;
-  return `<div class="row ${i.hist?'':'ed'} ${i.pre?'pre':''} ${i.id===selId?'sel':''}" onclick="showDetails(${i.id})"><div class="av">${i.dateRaw.slice(8)}</div><div class="mid"><b>${i.dateFormatted}${i.notes?' <i class="fas fa-comment-dots nt" title="Has a note"></i>':''}</b><small>${i.pre?'Before start · ':''}Close ${i.m_close||'-'} · SET ${sf(i.set_index)}</small></div><div class="rt"><b>${none?'—':fmt(i.bb_vol)}</b><small style="color:${col}">${p>0?'+':''}${p.toFixed(2)}%</small></div>${acts}</div>`}).join(''):'<div class="empty">No records found.</div>';
+  return `<div class="row ${i.hist?'':'ed'} ${i.pre?'pre':''} ${i.id===selId?'sel':''}" onclick="showDetails(${i.id})"><div class="av">${i.dateRaw.slice(8)}</div><div class="mid"><b>${i.dateFormatted}${i.notes||i.hl?' <i class="fas fa-comment-dots nt" title="Has a note"></i>':''}</b><small>${i.pre?'Before start · ':''}Close ${i.m_close||'-'} · SET ${sf(i.set_index)}</small></div><div class="rt"><b>${none?'—':fmt(i.bb_vol)}</b><small style="color:${col}">${p>0?'+':''}${p.toFixed(2)}%</small></div>${acts}</div>`}).join(''):'<div class="empty">No records found.</div>';
 }
 function autoSelect(){const d=prep();if(d.length)showDetails(d[d.length-1].id);else{$('dDate').textContent='';$('det').innerHTML='<div class="empty">No records yet. Add one from the form below.</div>'}}
 function toggleMore(){moreOpen=!moreOpen;$('mb').classList.toggle('on',moreOpen);$('mbtn').classList.toggle('open',moreOpen)}
@@ -967,7 +977,7 @@ function showDetails(id){
  const rest=Math.max(0,i.m_vol-i.bb_vol),pc=i.m_vol>0?(i.bb_vol/i.m_vol*100).toFixed(2):0,s=Number(i.set_index)||0,bought=i.bb_vol>0;
  const kv=(l,v,c)=>`<div class="kv"><small>${l}</small><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
  $('dDate').textContent=i.dateFormatted+(i.pre?' · before project start':'');
- const avgD=i.bb_vol>0&&+i.bb_val>0?i.bb_val/i.bb_vol:null,cl=+i.m_close,dif=avgD&&cl?(avgD-cl)/cl*100:null,hasN=!!(i.notes||(i.images||[]).length);
+ const avgD=i.bb_vol>0&&+i.bb_val>0?i.bb_val/i.bb_vol:null,cl=+i.m_close,dif=avgD&&cl?(avgD-cl)/cl*100:null,hasN=!!(i.notes||i.hl||(i.images||[]).length),nImg=(i.images||[]).length;
  const rw=(l,v,hx)=>`<div class="rw${hx?' hl':''}"><span>${l}</span><b>${v}</b></div>`;
  const chip=(l,v,c)=>`<div class="chip"><small>${l}</small><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
  $('det').innerHTML=`<div class="cmp">
@@ -979,24 +989,24 @@ function showDetails(id){
    ${rw('Volume (shares)',i.m_vol==null?'-':fmt(i.m_vol))}${rw('High',f2(i.m_high))}${rw('Low',f2(i.m_low))}${rw('Close',f2(i.m_close))}
    <div class="chips">${chip('Open',f2(i.m_open))}${chip('% change',(i.pct>0?'+':'')+i.pct.toFixed(2)+'%',i.pct>0?'var(--gi)':i.pct<0?'var(--r)':'')}${chip('SET chg',sf(i.set_index),s>0?'var(--gi)':s<0?'var(--r)':'')}</div></div>
  </div>
- ${hasN?`<button class="more ${moreOpen?'open':''}" id="mbtn" onclick="toggleMore()"><span><i class="fas fa-comment-dots"></i>Notes &amp; images${(i.images||[]).length?' ('+i.images.length+' photo'+(i.images.length>1?'s':'')+')':''}</span><i class="fas fa-chevron-down"></i></button>
- <div class="mbody ${moreOpen?'on':''}" id="mb">${i.notes?`<div class="note">${esc(i.notes)}</div>`:''}${(i.images||[]).length?`<div class="imgs">${i.images.map((s,k)=>`<img src="${s}" onclick="openLb(${id},${k})">`).join('')}</div>`:''}</div>`:''}`;
+ ${hasN?`<button class="more ${moreOpen?'open':''}" id="mbtn" onclick="toggleMore()"><span class="mtx"><i class="fas fa-comment-dots"></i>${i.hl?`<b class="mhl">${esc(i.hl)}</b><span class="mlab alt">Notes &amp; images</span>`:'<span class="mlab">Notes &amp; images</span>'}${nImg?`<em class="mcnt">${nImg} photo${nImg>1?'s':''}</em>`:''}</span><i class="fas fa-chevron-down"></i></button>
+ <div class="mbody ${moreOpen?'on':''}" id="mb">${i.hl?`<div class="nhl">${esc(i.hl)}</div>`:''}${i.notes?`<div class="note">${esc(i.notes)}</div>`:''}${nImg?`<button type="button" class="imgbtn" onclick="openLb(${id},0)"><i class="fas fa-images"></i> View images (${nImg})</button>`:''}</div>`:''}`;
  mk('dn',{type:'doughnut',data:{labels:['Buyback volume','Other market volume'],datasets:[{data:i.m_vol>0?[i.bb_vol,rest]:[0,1],backgroundColor:[css('--g'),css('--soft')],borderWidth:0,hoverOffset:6}]},options:{cutout:'68%',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
 }
 const shrink=f=>new Promise(res=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const k=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.7))};im.onerror=()=>res(b64(f));im.src=u});
 const b64=f=>new Promise((r,j)=>{const x=new FileReader();x.onload=()=>r(x.result);x.onerror=j;x.readAsDataURL(f)});
 async function saveData(e){
  e.preventDefault();const f=$('r_images').files,v=k=>$(k).value.trim(),nn=k=>v(k)===''?null:+v(k);
- const keys=['bb_vol','bb_high','bb_low','bb_val','m_open','m_high','m_low','m_close','m_vol','set_index','r_notes'];
+ const keys=['bb_vol','bb_high','bb_low','bb_val','m_open','m_high','m_low','m_close','m_vol','set_index','r_notes','r_hl'];
  if(!keys.some(k=>v(k)!=='')&&!f.length&&!(editingId&&editImgs.length)){toast('Add at least one value to save');return}
  let imgs=f.length?await Promise.all([...f].map(shrink)):(editingId?editImgs:[]);
- const dr=v('r_date')||todayISO(),r={id:editingId||Date.now(),dateRaw:dr,dateFormatted:fullDate(dr),bb_vol:nn('bb_vol')||0,bb_high:v('bb_high'),bb_low:v('bb_low'),bb_val:v('bb_val'),m_open:v('m_open'),m_high:v('m_high'),m_low:v('m_low'),m_close:v('m_close'),m_vol:nn('m_vol'),set_index:v('set_index'),notes:$('r_notes').value,images:imgs};
+ const dr=v('r_date')||todayISO(),r={id:editingId||Date.now(),dateRaw:dr,dateFormatted:fullDate(dr),bb_vol:nn('bb_vol')||0,bb_high:v('bb_high'),bb_low:v('bb_low'),bb_val:v('bb_val'),m_open:v('m_open'),m_high:v('m_high'),m_low:v('m_low'),m_close:v('m_close'),m_vol:nn('m_vol'),set_index:v('set_index'),hl:v('r_hl'),notes:$('r_notes').value,images:imgs};
  const d=load();if(editingId){const x=d.findIndex(a=>a.id===editingId);if(x>-1)d[x]=r}else d.push(r);
  store(d);enq({a:'ur',t:cur,id:r.id});const was=editingId;closeNote();render();showDetails(r.id);toast(was?'Data updated':'Data saved');
 }
 function editRecord(id,ev){ev.stopPropagation();const i=load().find(x=>x.id===id);if(!i)return;
  ['bb_vol','bb_high','bb_low','bb_val','m_open','m_high','m_low','m_close','m_vol'].forEach(k=>$(k).value=i[k]||'');
- $('r_date').value=i.dateRaw;$('set_index').value=i.set_index==null?'':i.set_index;$('r_notes').value=i.notes||'';
+ $('r_date').value=i.dateRaw;$('set_index').value=i.set_index==null?'':i.set_index;$('r_notes').value=i.notes||'';$('r_hl').value=i.hl||'';
  editingId=id;editImgs=i.images||[];$('btnSubmit').textContent='Update data';$('fTitle').textContent='Edit note · '+cur;$('editImg').style.display='inline';showNote()}
 function upFname(){const f=$('r_images').files;$('fname').textContent=!f.length?'No file chosen':f.length===1?f[0].name:f.length+' files selected'}
 function showNote(){$('noteOv').classList.add('on');$('r_date').focus()}
@@ -1021,7 +1031,7 @@ document.addEventListener('keydown',e=>{
 });
 function exportToExcel(){
  const d=prep(),R=HR();if(!d.length){toast('No data available to export');return}
- const rows=d.map(i=>{const o={"Date":i.dateFormatted,"Buyback Volume":i.bb_vol,"Buyback High":i.bb_high,"Buyback Low":i.bb_low,"Buyback Value":i.bb_val,"Market Open":i.m_open,"Market High":i.m_high,"Market Low":i.m_low,"Market Close":i.m_close,"% Change":i.pct.toFixed(2)+'%',"Market Volume":i.m_vol,"SET Points":i.set_index,"Notes":i.notes};if(R)o["Before project start"]=i.pre?'Yes':'';return o});
+ const rows=d.map(i=>{const o={"Date":i.dateFormatted,"Buyback Volume":i.bb_vol,"Buyback High":i.bb_high,"Buyback Low":i.bb_low,"Buyback Value":i.bb_val,"Market Open":i.m_open,"Market High":i.m_high,"Market Low":i.m_low,"Market Close":i.m_close,"% Change":i.pct.toFixed(2)+'%',"Market Volume":i.m_vol,"SET Points":i.set_index,"Highlight":i.hl||"","Notes":i.notes};if(R)o["Before project start"]=i.pre?'Yes':'';return o});
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),(cur+' '+(R?R.label:'Data')).slice(0,31));XLSX.writeFile(wb,cur+(R?'_'+R.label.replace(/\s+/g,'')+'_History':'')+'_Buyback_Records.xlsx')}
 const xd=iso=>{const[y,m,d]=iso.split('-').map(Number);return(Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/864e5};
 const nz=v=>v===''||v==null||isNaN(+v)?null:+v;
