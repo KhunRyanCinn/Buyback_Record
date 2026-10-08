@@ -218,7 +218,7 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
  <button class="nav addco" onclick="openModal()"><i class="fas fa-plus"></i> Add stock</button>
  <div class="grp">Other menu</div>
  <button class="nav" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Log out</button>
- <div class="sync" id="sync"></div>
+ <div class="sync" id="sync"></div><button type="button" class="lnk" style="margin:0 0 6px 14px;align-self:flex-start" onclick="resyncAll()">Re-upload all data</button>
  <div class="promo"><b>Target progress</b><small id="pSub"></small><div class="bar"><i id="pBar"></i></div><button class="btn" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Export Excel</button><button class="btn alt" onclick="downloadHistory()"><i class="fas fa-download"></i> Download all rounds</button></div>
  <div class="mode"><button id="mL" onclick="setTheme(0)"><i class="fas fa-sun"></i> Light</button><button id="mD" onclick="setTheme(1)"><i class="fas fa-moon"></i> Dark</button></div>
 </aside>
@@ -892,7 +892,7 @@ function roundItems(k){return roundInfo(k).map(r=>`<button class="rnd ${k===cur&
 let ordMode=false;
 function coKeys(){let o=[];try{o=JSON.parse(localStorage.getItem('bbOrder'))||[]}catch(e){}const all=Object.keys(config);return[...o.filter(k=>all.includes(k)),...all.filter(k=>!o.includes(k))]}
 function toggleOrd(){ordMode=!ordMode;renderNav()}
-function moveCo(k,d,ev){ev.stopPropagation();const a=coKeys(),i=a.indexOf(k),j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];try{localStorage.setItem('bbOrder',JSON.stringify(a))}catch(e){}renderNav()}
+function moveCo(k,d,ev){ev.stopPropagation();const a=coKeys(),i=a.indexOf(k),j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];try{localStorage.setItem('bbOrder',JSON.stringify(a))}catch(e){}enq({a:'uo'});renderNav()}
 function renderNav(){const ks=coKeys();$('ordBtn').textContent=ordMode?'Done':'Edit';$('cos').classList.toggle('ord',ordMode);
  $('cos').innerHTML=ks.map((k,n)=>{const has=!!HIST[k],open=has&&k===cur&&treeOpen&&!ordMode;
  return `<div><div class="corow"><button class="nav ${k===cur?'on':''} ${open?'open':''}" onclick="pickCo('${k}')"${has?` aria-expanded="${open}"`:''}><span>${k}</span>${has?'<i class="fas fa-chevron-down chev"></i>':''}${config[k].custom&&!ordMode?`<span class="x" title="Remove" onclick="delCo('${k}',event)">&times;</span>`:''}</button>${ordMode?`<div class="mvs"><button type="button" class="mv" aria-label="Move ${k} up" ${n===0?'disabled':''} onclick="moveCo('${k}',-1,event)"><i class="fas fa-chevron-up"></i></button><button type="button" class="mv" aria-label="Move ${k} down" ${n===ks.length-1?'disabled':''} onclick="moveCo('${k}',1,event)"><i class="fas fa-chevron-down"></i></button></div>`:`<button type="button" class="newn" title="New note" aria-label="New note for ${k}" onclick="newNote('${k}',event)"><i class="fas fa-pen-to-square"></i></button>`}</div>${open?`<div class="rounds">${roundItems(k)}</div>`:''}</div>`}).join('');
@@ -1115,19 +1115,21 @@ if(sb)sb.auth.onAuthStateChange(async(ev,ss)=>{
 // ---- Sync queue ----
 const getQ=()=>{try{return JSON.parse(localStorage.getItem('bbQ'))||[]}catch(e){return[]}},setQ=q=>{try{localStorage.setItem('bbQ',JSON.stringify(q))}catch(e){}};
 const ld=t=>{try{return JSON.parse(localStorage.getItem('stockData_'+t))||[]}catch(e){return[]}},sd=(t,d)=>{try{localStorage.setItem('stockData_'+t,JSON.stringify(d))}catch(e){}};
+function resyncAll(){try{Object.keys(localStorage).filter(k=>k.startsWith('bbMig_')).forEach(k=>localStorage.removeItem(k))}catch(e){}toast('Re-uploading all data…');syncNow()}
 function enq(op){setQ([...getQ(),op]);syncNow()}
 const ok=async p=>{const {error}=await p;if(error)throw error};
 async function runOp(o){
  if(o.a==='ur'){const r=ld(o.t).find(x=>x.id===o.id);if(r)await ok(sb.from('bb_records').upsert({user_id:UID,ticker:o.t,id:o.id,data:r,updated_at:new Date().toISOString()},{onConflict:'user_id,ticker,id'}))}
  else if(o.a==='dr')await ok(sb.from('bb_records').delete().eq('ticker',o.t).eq('id',o.id));
  else if(o.a==='uc'){if(config[o.t])await ok(sb.from('bb_stocks').upsert({user_id:UID,ticker:o.t,config:config[o.t]},{onConflict:'user_id,ticker'}))}
+ else if(o.a==='uo'){let ord=[];try{ord=JSON.parse(localStorage.getItem('bbOrder'))||[]}catch(e){}await ok(sb.from('bb_stocks').upsert({user_id:UID,ticker:'_ORDER',config:{order:ord}},{onConflict:'user_id,ticker'}))}
  else if(o.a==='dc'){await ok(sb.from('bb_records').delete().eq('ticker',o.t));await ok(sb.from('bb_stocks').delete().eq('ticker',o.t))}
 }
 async function pull(){
  if(getQ().length)return;
  let rs=[];for(let f=0;;f+=1000){const {data,error}=await sb.from('bb_records').select('ticker,id,data').range(f,f+999);if(error)throw error;rs=rs.concat(data);if(data.length<1000)break}
  const {data:ss,error}=await sb.from('bb_stocks').select('ticker,config');if(error)throw error;
- const rc={};ss.forEach(x=>rc[x.ticker]={...x.config,custom:true});setCustom(rc);config={...base,...rc};
+ const rc={};ss.forEach(x=>{if(x.ticker==='_ORDER'){if(x.config&&Array.isArray(x.config.order)){try{localStorage.setItem('bbOrder',JSON.stringify(x.config.order))}catch(e){}}}else rc[x.ticker]={...x.config,custom:true}});setCustom(rc);config={...base,...rc};
  const by={};rs.forEach(r=>(by[r.ticker]=by[r.ticker]||[]).push(r.data));
  Object.keys(config).forEach(t=>sd(t,by[t]||[]));
  if(!config[cur]){cur='MAJOR';view='cur'}
@@ -1141,12 +1143,15 @@ async function syncNow(){
   if(!session){setSync('Not synced · sign in again to sync');return}
   UID=session.user.id;
   if(localStorage.getItem('bbMig_'+UID)!=='1'){
-   const q=getQ();Object.keys(config).forEach(t=>{ld(t).forEach(r=>q.push({a:'ur',t,id:r.id}));if(config[t].custom)q.push({a:'uc',t})});setQ(q);
+   const q=getQ();Object.keys(config).forEach(t=>{ld(t).forEach(r=>q.push({a:'ur',t,id:r.id}));if(config[t].custom)q.push({a:'uc',t})});if(localStorage.getItem('bbOrder'))q.push({a:'uo'});setQ(q);
   }
-  let q;while((q=getQ()).length){await runOp(q[0]);setQ(getQ().slice(1))}
+  const q0=getQ(),keep=[];let fail=null;
+  for(const o of q0){try{await runOp(o)}catch(e){keep.push(o);fail=fail||e}}
+  setQ([...keep,...getQ().slice(q0.length)]);
+  if(fail)throw fail;
   localStorage.setItem('bbMig_'+UID,'1');
   await pull();setSync('Synced · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
- }catch(e){setSync('Offline · will sync later')}finally{syncing=false}
+ }catch(e){console.error(e);setSync(isNet(e)?'Offline · will sync later':'Sync error · '+String((e&&(e.message||e.details))||e).slice(0,90)+' (tap Re-upload to retry)')}finally{syncing=false}
 }
 addEventListener('online',syncNow);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('auth').classList.contains('off'))syncNow()});
 setInterval(()=>{if(!document.hidden&&$('auth').classList.contains('off'))syncNow()},60000);
