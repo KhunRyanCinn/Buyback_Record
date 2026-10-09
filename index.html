@@ -206,6 +206,10 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
 .nhl{font-size:18px;font-weight:800;line-height:1.4;margin-top:8px;overflow-wrap:anywhere}
 .note{font-size:14.5px;font-weight:400;color:var(--mut);margin-top:6px}
 .imgbtn{margin-top:10px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;font-size:14px;padding:9px 16px;border-radius:12px;cursor:pointer}.imgbtn i{color:var(--o)}.imgbtn:hover{border-color:var(--g)}
+
+.prow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}.prow p{margin:0!important}
+.ecbtn{border:1px solid var(--line);background:var(--card);color:var(--mut);font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px;cursor:pointer;transition:.15s}.ecbtn i{color:var(--o);margin-right:4px}.ecbtn:hover{border-color:var(--g);color:var(--ink)}
+.ec2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style></head>
 <body>
 <div class="auth" id="auth"><form class="card abox" id="aForm" onsubmit="authSubmit(event)">
@@ -232,7 +236,7 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
 </aside>
 <main class="main">
  <div class="top">
-  <div class="ttlwrap"><h1><button class="ttlbtn" id="titleBtn" aria-haspopup="true" aria-expanded="false" onclick="toggleRM(event)"><span id="titleTxt"></span><i class="fas fa-chevron-down" id="titleChev"></i></button></h1><p id="period"></p><div class="hnote" id="hnote"></div><div class="rmenu" id="rmenu" role="menu"></div></div>
+  <div class="ttlwrap"><h1><button class="ttlbtn" id="titleBtn" aria-haspopup="true" aria-expanded="false" onclick="toggleRM(event)"><span id="titleTxt"></span><i class="fas fa-chevron-down" id="titleChev"></i></button></h1><div class="prow"><p id="period"></p><button type="button" class="ecbtn" id="ecBtn" onclick="openEditCo()"><i class="fas fa-pen"></i> Edit project</button></div><div class="hnote" id="hnote"></div><div class="rmenu" id="rmenu" role="menu"></div></div>
   <label class="search" style="margin:0 0 0 auto"><i class="fas fa-search"></i><input id="q" placeholder="Search date or notes" oninput="renderList()"></label>
  </div>
  
@@ -279,6 +283,16 @@ input[type=file].vh{position:absolute;width:1px;height:1px;padding:0;border:0;op
  </div></div>
  <footer class="credit">website developed by Ryan 2026</footer>
 </main>
+<div class="ov" id="editCo" onclick="closeEditCo()"><form class="card mbox" id="ecForm" data-enter="1" novalidate onsubmit="saveCo(event)" onclick="event.stopPropagation()">
+ <h3 id="ecTitle">Edit project</h3>
+ <div><label for="ec_l">Round name</label><input type="text" id="ec_l" maxlength="30" placeholder="e.g. Round 4"></div>
+ <div class="ec2"><div><label for="ec_s">Start date</label><input type="date" id="ec_s"></div><div><label for="ec_e">End date</label><input type="date" id="ec_e"></div></div>
+ <div><label for="ec_sh">Total target (shares)</label><input type="number" id="ec_sh" min="0" step="any" placeholder="Leave empty if none"></div>
+ <div><label for="ec_b">Total budget (THB)</label><input type="number" id="ec_b" min="0" step="any" placeholder="Leave empty if none"></div>
+ <div><label for="ec_c">Previous close price (base for the first day's % change)</label><input type="number" id="ec_c" step="0.01" min="0"></div>
+ <div class="err" id="ecErr" role="alert"></div>
+ <button class="btn sub">Save changes</button><button type="button" class="btn" style="background:var(--soft);color:var(--ink)" onclick="closeEditCo()">Cancel</button>
+</form></div>
 <div class="ov" id="modal" onclick="closeModal()"><form class="card mbox" id="coForm" data-enter="1" onsubmit="addCo(event)" onclick="event.stopPropagation()">
  <h3>Add stock</h3>
  <div><label>Ticker</label><input type="text" id="co_t" placeholder="e.g. PTT" required maxlength="12" style="text-transform:uppercase"></div>
@@ -915,6 +929,23 @@ function closeRM(){$('rmenu').classList.remove('on');$('titleBtn').setAttribute(
 document.addEventListener('click',e=>{if(!e.target.closest('#rmenu,#titleBtn'))closeRM()});
 function openModal(){$('modal').classList.add('on');$('co_t').focus()}
 function closeModal(){$('modal').classList.remove('on')}
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtP=iso=>{const[y,m,d]=iso.split('-').map(Number);return d+' '+MN[m-1]+' '+y};
+function parseP(str){const m=String(str||'').match(/(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})\s*[-\u2013\u2014]\s*(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/);if(!m)return['',''];
+ const g=(d,mo,y)=>{const i=MN.findIndex(x=>x.toLowerCase()===mo.toLowerCase());return i<0?'':y+'-'+String(i+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')};return[g(m[1],m[2],m[3]),g(m[4],m[5],m[6])]}
+function openEditCo(){if(HR())return;const c=config[cur],[a,b]=parseP(c.period);
+ $('ecTitle').textContent='Edit project · '+cur;$('ec_l').value=c.roundLabel||'';$('ec_s').value=a;$('ec_e').value=b;
+ $('ec_sh').value=c.maxShares>0?c.maxShares:'';$('ec_b').value=c.maxBudget>0?c.maxBudget:'';$('ec_c').value=c.baseClose>0?c.baseClose:'';$('ecErr').textContent='';$('editCo').classList.add('on');$('ec_l').focus()}
+function closeEditCo(){$('editCo').classList.remove('on')}
+function saveCo(e){e.preventDefault();const k=cur,c={...config[k]},s=$('ec_s').value,en=$('ec_e').value,er=$('ecErr');
+ if(!!s!==!!en){er.textContent='Please set both the start and end dates.';return}
+ if(s&&en<s){er.textContent='End date must be after the start date.';return}
+ const sh=+$('ec_sh').value,bd=+$('ec_b').value,bc=$('ec_c').value;
+ if(sh<0||bd<0||(bc!==''&&+bc<0)){er.textContent='Values cannot be negative.';return}
+ const lb=$('ec_l').value.trim();if(lb)c.roundLabel=lb;else delete c.roundLabel;
+ if(s)c.period=fmtP(s)+' - '+fmtP(en);
+ c.maxShares=sh>0?sh:0;c.maxBudget=bd>0?bd:0;if(bc!=='')c.baseClose=+bc;
+ config[k]=c;const cu=getCustom();cu[k]=c;setCustom(cu);enq({a:'uc',t:k});closeEditCo();render();if(selId&&prep().some(x=>x.id===selId))showDetails(selId);toast('Project info updated')}
 function addCo(e){e.preventDefault();const k=$('co_t').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
  if(!k)return;if(config[k]){toast(k+' already exists');return}
  config[k]={period:$('co_p').value||'-',maxShares:+$('co_s').value,maxBudget:+$('co_b').value,baseClose:+$('co_c').value,icon:'chart',custom:true};
@@ -941,7 +972,7 @@ function renderReturn(pj){
 function render(){
  const c=RM(),R=HR(),d=prep(),pj=d.filter(x=>!x.pre),G=css('--g'),O=css('--o'),dark=document.body.classList.contains('dark'),has=!!HIST[cur];
  renderNav();$('mL').classList.toggle('on',!dark);$('mD').classList.toggle('on',dark);
- $('titleTxt').textContent=cur+' Buyback'+(has?' · '+c.label:'');$('titleChev').style.display=has?'':'none';$('titleBtn').disabled=!has;
+ $('titleTxt').textContent=cur+' Buyback'+(has||config[cur].roundLabel?' · '+c.label:'');$('ecBtn').style.display=R?'none':'';$('titleChev').style.display=has?'':'none';$('titleBtn').disabled=!has;
  $('period').textContent='Project period: '+c.period;
  const hn=$('hnote');if(R){hn.style.display='block';hn.innerHTML='Viewing history · <b>'+esc(R.label)+'</b> (read-only)'+(R.desc?' · '+esc(R.desc):'')+' · <button type="button" class="lnk" onclick="setRound(\'cur\')">Back to '+esc(config[cur].roundLabel||'current round')+'</button>'}else hn.style.display='none';
  let bought=0,spent=0,mv=0,nb=0,lastShare=null,cv=[],cs=[],pr=[];
@@ -1139,7 +1170,7 @@ async function pull(){
  if(getQ().length)return;
  let rs=[];for(let f=0;;f+=1000){const {data,error}=await sb.from('bb_records').select('ticker,id,data').range(f,f+999);if(error)throw error;rs=rs.concat(data);if(data.length<1000)break}
  const {data:ss,error}=await sb.from('bb_stocks').select('ticker,config');if(error)throw error;
- const rc={};ss.forEach(x=>{if(x.ticker==='_ORDER'){if(x.config&&Array.isArray(x.config.order)){try{localStorage.setItem('bbOrder',JSON.stringify(x.config.order))}catch(e){}}}else rc[x.ticker]={...x.config,custom:true}});setCustom(rc);config={...base,...rc};
+ const rc={};ss.forEach(x=>{if(x.ticker==='_ORDER'){if(x.config&&Array.isArray(x.config.order)){try{localStorage.setItem('bbOrder',JSON.stringify(x.config.order))}catch(e){}}}else rc[x.ticker]={...x.config,custom:!base[x.ticker]}});setCustom(rc);config={...base,...rc};
  const by={};rs.forEach(r=>(by[r.ticker]=by[r.ticker]||[]).push(r.data));
  Object.keys(config).forEach(t=>sd(t,by[t]||[]));
  if(!config[cur]){cur='MAJOR';view='cur'}
@@ -1153,7 +1184,7 @@ async function syncNow(){
   if(!session){setSync('Not synced · sign in again to sync');return}
   UID=session.user.id;
   if(localStorage.getItem('bbMig_'+UID)!=='1'){
-   const q=getQ();Object.keys(config).forEach(t=>{ld(t).forEach(r=>q.push({a:'ur',t,id:r.id}));if(config[t].custom)q.push({a:'uc',t})});if(localStorage.getItem('bbOrder'))q.push({a:'uo'});setQ(q);
+   const q=getQ();Object.keys(config).forEach(t=>{ld(t).forEach(r=>q.push({a:'ur',t,id:r.id}));if(config[t].custom||getCustom()[t])q.push({a:'uc',t})});if(localStorage.getItem('bbOrder'))q.push({a:'uo'});setQ(q);
   }
   const q0=getQ(),keep=[];let fail=null;
   for(const o of q0){try{await runOp(o)}catch(e){keep.push(o);fail=fail||e}}
